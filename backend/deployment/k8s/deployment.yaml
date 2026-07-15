@@ -1,0 +1,153 @@
+---
+# ── AION Backend API Deployment ───────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aion-backend
+  namespace: aion
+  labels:
+    app: aion-backend
+    component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: aion-backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: aion-backend
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: aion-backend:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - uvicorn
+            - app.main:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8000"
+            - --workers
+            - "4"
+            - --loop
+            - uvloop
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: aion-config
+            - secretRef:
+                name: aion-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+---
+# ── Celery Worker Deployment ──────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aion-celery-worker
+  namespace: aion
+  labels:
+    app: aion-celery-worker
+    component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aion-celery-worker
+  template:
+    metadata:
+      labels:
+        app: aion-celery-worker
+        component: worker
+    spec:
+      containers:
+        - name: worker
+          image: aion-backend:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - app.core.celery_app.celery_app
+            - worker
+            - --loglevel=info
+            - --concurrency=4
+            - --queues=sensing,analysis,intelligence,reports
+          envFrom:
+            - configMapRef:
+                name: aion-config
+            - secretRef:
+                name: aion-secrets
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+---
+# ── Celery Beat Deployment ────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aion-celery-beat
+  namespace: aion
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aion-celery-beat
+  template:
+    metadata:
+      labels:
+        app: aion-celery-beat
+        component: scheduler
+    spec:
+      containers:
+        - name: beat
+          image: aion-backend:latest
+          command:
+            - celery
+            - -A
+            - app.core.celery_app.celery_app
+            - beat
+            - --loglevel=info
+          envFrom:
+            - configMapRef:
+                name: aion-config
+            - secretRef:
+                name: aion-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

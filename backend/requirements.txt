@@ -1,0 +1,49 @@
+# AION Backend — Local/Dev Requirements
+# Lightweight stack: SQLite (no Postgres) + embedded NetworkX graph (no Neo4j).
+# Redis/Kafka/Qdrant/MinIO/Celery and the heavy ML stack (torch/langchain/
+# llama-index/sentence-transformers) are not imported anywhere in the request
+# path — they're intentionally omitted here. See requirements.docker.txt for
+# the full production/Docker dependency set.
+
+# Core Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.6.0
+python-multipart==0.0.12
+
+# Database — SQLite (async)
+sqlalchemy[asyncio]==2.0.36
+aiosqlite==0.20.0
+
+# Graph Store — embedded (replaces Neo4j)
+networkx==3.4.2
+
+# AI Agents (deterministic LangGraph workflows, no LLM calls)
+langgraph==0.2.38
+
+# LLM (used only for board narrative, with a deterministic fallback)
+openai==1.54.3
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1  # passlib 1.7.4 breaks on bcrypt>=4.1's backend-detection API
+email-validator==2.2.0  # required by pydantic EmailStr in app/api/v1/endpoints/auth.py
+
+# HTTP Client
+httpx==0.27.2
+
+# Observability
+structlog==24.4.0
+prometheus-fastapi-instrumentator==7.0.0
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+
+# Document upload / ingestion — file text extraction
+pypdf==6.14.2
+python-docx==1.2.0
+openpyxl==3.1.5

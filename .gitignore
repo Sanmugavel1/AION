@@ -1,0 +1,22 @@
+# Backend (Python)
+backend/venv/
+backend/.venv/
+__pycache__/
+*.pyc
+backend/.pytest_cache/
+backend/.env
+backend/.coverage
+backend/htmlcov/
+
+# Frontend (Node/Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env
+frontend/.env.local
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts
+
+# OS / editor
+.DS_Store
+*.swp

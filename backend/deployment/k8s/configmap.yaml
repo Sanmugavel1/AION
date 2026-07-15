@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aion-config
+  namespace: aion
+data:
+  POSTGRES_HOST: "aion-postgres-svc"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "aion"
+  NEO4J_HOST: "aion-neo4j-svc"
+  NEO4J_PORT: "7687"
+  REDIS_HOST: "aion-redis-svc"
+  REDIS_PORT: "6379"
+  QDRANT_HOST: "aion-qdrant-svc"
+  QDRANT_PORT: "6333"
+  MINIO_ENDPOINT: "aion-minio-svc:9000"
+  KAFKA_BOOTSTRAP_SERVERS: "aion-kafka-svc:9092"
+  LLM_MODEL: "gpt-4o-mini"
+  EMBEDDING_MODEL: "all-MiniLM-L6-v2"
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"

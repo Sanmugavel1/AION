@@ -1,0 +1,311 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* AION Onyx & Gold Theme — a warm-neutral onyx/charcoal base (matching
+       the logo's own near-black, not a blue-purple navy fighting the gold
+       accent for attention) with a warm gold accent, a luxury/high-stakes
+       register. Fonts are loaded via next/font/google in app/layout.tsx
+       (self-hosted, no external @import needed here). */
+    --background: 40 15% 4%;
+    --foreground: 44 39% 92%;
+    --card: 37 21% 7%;
+    --card-foreground: 44 39% 92%;
+    --popover: 37 21% 7%;
+    --popover-foreground: 44 39% 92%;
+    --primary: 42 77% 60%;
+    --primary-foreground: 40 15% 4%;
+    --secondary: 38 25% 10%;
+    --secondary-foreground: 44 39% 92%;
+    --muted: 38 25% 10%;
+    --muted-foreground: 37 13% 60%;
+    --accent: 42 45% 16%;
+    --accent-foreground: 42 77% 82%;
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 38 20% 18%;
+    --input: 38 20% 16%;
+    --ring: 42 77% 60%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-aion-bg text-aion-ink font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100dvh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1B2440;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #E8B84B;
+  }
+
+  /* Selection */
+  ::selection {
+    background: rgba(232, 184, 75, 0.30);
+    color: #F3EFE4;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-aion-accent ring-offset-2 ring-offset-aion-bg;
+  }
+}
+
+/* Slow drift across the card border gradient — background-position is a
+   paint-cheap property to animate (no layout/filter recompute), reads as a
+   subtle living shimmer rather than a static ring. */
+@keyframes card-border-shimmer {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+
+@layer components {
+  /* ─── Cards ─────────────────────────────────────────────────────────────── */
+  /* Glass surface — the reference product's signature card treatment:
+     translucent ink + blur, not an opaque flat panel. A full gradient bezel
+     ring (like a jewelry setting, not a flat single-color rule), a diagonal
+     wash instead of a flat fill, and a real corner bloom keep this from
+     reading as a plain black rectangle even with little color behind it. */
+  .card-surface {
+    @apply relative rounded-2xl border border-transparent shadow-card backdrop-blur-xl;
+    background: linear-gradient(155deg, rgba(40,33,22,0.92) 0%, rgba(25,21,15,0.94) 50%, rgba(14,12,9,0.96) 100%);
+  }
+  .card-surface::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.25px;
+    background: linear-gradient(135deg, rgba(232,184,75,0.55) 0%, rgba(255,247,224,0.24) 22%, rgba(232,184,75,0.08) 45%, rgba(199,123,95,0.22) 70%, rgba(232,184,75,0.42) 100%);
+    background-size: 220% 220%;
+    animation: card-border-shimmer 10s ease-in-out infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .card-surface::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(ellipse 70% 60% at 8% -8%, rgba(232,184,75,0.18), transparent 65%);
+    pointer-events: none;
+  }
+
+  .card-surface-hover {
+    @apply card-surface transition-all duration-200 ease-out
+      hover:border-aion-border-strong hover:shadow-card-hover;
+  }
+
+  /* Kept for any lingering references — same as card-surface(-hover) */
+  .glass-card {
+    @apply card-surface;
+  }
+  .glass-card-hover {
+    @apply card-surface-hover;
+  }
+  .glass-panel {
+    @apply rounded-lg border border-aion-border bg-aion-surface/75 backdrop-blur-xl;
+  }
+
+  /* Stronger glass for hero/overlay surfaces */
+  .glass-strong {
+    @apply rounded-xl border border-aion-border-strong bg-aion-surface/85 backdrop-blur-2xl shadow-card-lg;
+  }
+
+  /* Gradient-border glass card — the "premium" treatment for one hero
+     element per page, not general chrome. Uses a masked pseudo-border so
+     the gradient traces the card outline only. */
+  .glass-gradient-border {
+    position: relative;
+    @apply rounded-xl bg-aion-surface/75 backdrop-blur-xl;
+  }
+  .glass-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(232,184,75,0.55) 0%, rgba(245,217,138,0.18) 50%, rgba(232,184,75,0.14) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ─── Buttons ───────────────────────────────────────────────────────────── */
+  .btn-accent {
+    @apply relative overflow-hidden rounded-md px-6 py-2.5
+      bg-aion-accent text-aion-bg font-semibold text-sm
+      transition-all duration-200
+      shadow-glow-accent
+      hover:bg-aion-accent-hover hover:-translate-y-0.5
+      active:scale-[0.98]
+      focus-visible:ring-2 focus-visible:ring-aion-accent focus-visible:ring-offset-2 focus-visible:ring-offset-aion-bg;
+  }
+
+  /* Skeleton loader — dark shimmer */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-aion-surface2;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(232,184,75, 0.14) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 1.5s infinite;
+  }
+
+  /* Live/real-time status pulse — use sparingly, only for genuine live data */
+  .live-pulse {
+    @apply animate-pulse-glow;
+  }
+
+  /* Health indicator dots */
+  .health-dot-green {
+    @apply h-2 w-2 rounded-full bg-health-green;
+  }
+  .health-dot-yellow {
+    @apply h-2 w-2 rounded-full bg-health-yellow;
+  }
+  .health-dot-red {
+    @apply h-2 w-2 rounded-full bg-health-red animate-pulse;
+  }
+
+  /* Metric card */
+  .metric-card {
+    @apply card-surface p-5 space-y-1.5;
+  }
+
+  /* Sidebar link (dark rail) */
+  .sidebar-link {
+    @apply relative flex items-center gap-3 rounded-md px-3 py-2.5
+      text-sm text-aion-sidebar-text font-medium
+      transition-all duration-200
+      hover:bg-aion-sidebar-hover hover:text-aion-sidebar-text-active
+      cursor-pointer select-none;
+  }
+  .sidebar-link.active {
+    @apply bg-aion-sidebar-hover text-aion-sidebar-text-active;
+  }
+  .sidebar-link.active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-aion-accent;
+    box-shadow: 0 0 8px rgba(232,184,75, 0.7);
+  }
+
+  /* Page heading — display face + a soft gold glow, consistently applied as
+     the one signature moment on every dashboard page rather than an ad-hoc
+     per-page decision. */
+  .page-title {
+    @apply font-display text-2xl font-bold tracking-tight text-aion-ink;
+    text-shadow: 0 0 24px rgba(232,184,75,0.20);
+  }
+  .page-subtitle {
+    @apply text-sm text-aion-ink-muted;
+  }
+
+  /* Data table */
+  .data-table th {
+    @apply text-xs font-medium text-aion-ink-muted uppercase tracking-wider;
+  }
+}
+
+@layer utilities {
+  .text-gradient-accent {
+    @apply bg-clip-text text-transparent bg-accent-gradient;
+  }
+  .text-gradient-hero {
+    background-image: theme('backgroundImage.text-gradient-hero');
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Subtle violet-tinted grid — background texture, not a foreground pattern */
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(232,184,75, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,184,75, 0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* ─── Glowing / shimmering text — ported from the TalentRank AI reference ──
+     Use on ONE headline per page at most; this is a signature moment, not a
+     default text treatment. */
+  .text-glow {
+    text-shadow: 0 0 20px rgba(232,184,75,0.55), 0 0 44px rgba(232,184,75,0.28);
+  }
+  .text-glow-soft {
+    text-shadow: 0 0 14px rgba(232,184,75,0.35);
+  }
+  .shimmer-text {
+    background-image: theme('backgroundImage.shimmer-gradient');
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Subtle hover lift for interactive surfaces */
+  .lift-on-hover {
+    @apply transition-transform duration-200 ease-out will-change-transform;
+  }
+  .lift-on-hover:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
