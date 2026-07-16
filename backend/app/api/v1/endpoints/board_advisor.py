@@ -162,6 +162,16 @@ _DISEASE_ACTIONS = {
     "innovation_paralysis": "Create dedicated space/time for cross-team idea exchange",
 }
 
+# Plain-English gloss for each disease codename — used so any answer (LLM or
+# heuristic) that names one the first time also explains what it means.
+_DISEASE_PLAIN = {
+    "knowledge_cancer": "conflicting or duplicate knowledge is spreading and crowding out the correct version",
+    "memory_alzheimers": "critical knowledge is fading because the people who hold it haven't documented it",
+    "communication_stroke": "a team has effectively stopped talking to another team",
+    "knowledge_obesity": "there's so much stale, redundant documentation that finding the right thing is getting harder",
+    "innovation_paralysis": "teams have stopped cross-pollinating ideas, so innovation has stalled",
+}
+
 
 @router.get("/risks")
 async def get_predicted_risks(
@@ -369,17 +379,146 @@ async def chat_with_advisor(
     try:
         answer = await llm_chat(messages, system=system_prompt)
     except LLMError as e:
-        logger.error("Advisor chat LLM call failed, using fallback", error=str(e))
-        answer = (
-            "I'm having trouble reaching the AI model right now, so here's what I can tell you "
-            f"directly from live data: organizational health is "
-            f"{context['organizational_intelligence_index']['overall_health_pct']}%, with "
-            f"{context['knowledge_bottlenecks']['single_owner_critical_items']} single-owner knowledge "
-            f"bottlenecks and {context['knowledge_decay']['isolated_unused_items']} isolated/unused "
-            "knowledge items. Please try asking again shortly."
-        )
+        logger.info("Advisor chat LLM unavailable, using heuristic reasoning engine", error=str(e))
+        answer = _heuristic_answer(request.message, context)
 
     return {"answer": answer, "grounded_on": context}
+
+
+def _detect_intent(message: str) -> str:
+    """Lightweight keyword-based intent match for the heuristic reasoning engine."""
+    m = message.lower()
+    if any(k in m for k in ("biggest risk", "top risk", "main risk", "risk right now", "most risk", "greatest risk")):
+        return "biggest_risk"
+    if any(k in m for k in ("how healthy", "overall health", "health of", "how is our", "how are we doing", "health score")):
+        return "health_overview"
+    if any(k in m for k in ("someone leaves", "leaves the company", "if they leave", "succession", "at risk if", "bus factor", "hit by a bus")):
+        return "succession_risk"
+    if any(k in m for k in ("this week", "what should we do", "should we do", "improve", "recommend", "next step", "priorit")):
+        return "action_plan"
+    return "general"
+
+
+def _top_disease(diseases: dict, severities: tuple[str, ...]) -> Optional[tuple[str, dict]]:
+    candidates = [(name, d) for name, d in diseases.items() if d.get("severity") in severities]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[1].get("severity_score") or 0)
+
+
+def _explain_disease(name: str) -> str:
+    label = name.replace("_", " ").title()
+    plain = _DISEASE_PLAIN.get(name)
+    return f"**{label}** ({plain})" if plain else f"**{label}**"
+
+
+def _heuristic_answer(message: str, context: dict) -> str:
+    """
+    Deterministic, data-grounded answer engine that stands in for the LLM when
+    no model is reachable (e.g. no API key configured). Reuses the exact same
+    live snapshot the LLM would have been given, so the answer is just as
+    grounded — only the authoring is template-based instead of generative.
+    """
+    intent = _detect_intent(message)
+    oii = context["organizational_intelligence_index"]
+    bottlenecks = context["knowledge_bottlenecks"]
+    decay = context["knowledge_decay"]
+    diseases = context["organizational_diseases"]
+    health_pct = oii.get("overall_health_pct")
+    health_str = f"{health_pct:.0f}%" if isinstance(health_pct, (int, float)) else "not yet computed"
+
+    if intent == "biggest_risk":
+        critical = _top_disease(diseases, ("critical",))
+        warning = _top_disease(diseases, ("warning",))
+        top = critical or warning
+        if top:
+            name, d = top
+            severity_word = "critical" if d.get("severity") == "critical" else "an early warning"
+            lines = [
+                f"Right now your biggest risk is {_explain_disease(name)}, currently flagged at "
+                f"**{severity_word}** severity ({d.get('severity_score', 0):.0f}% on AION's scale).",
+            ]
+            if bottlenecks["single_owner_critical_items"] > 0:
+                lines.append(
+                    f"Compounding it: **{bottlenecks['single_owner_critical_items']} pieces of critical knowledge** "
+                    f"are held by just one person each, including {_join(bottlenecks['examples'])}."
+                )
+            lines.append(f"First move: {_DISEASE_ACTIONS.get(name, 'review and address this pattern')}.")
+            return "\n\n".join(lines)
+        if bottlenecks["single_owner_critical_items"] > 0:
+            return (
+                f"Your biggest risk right now is **knowledge concentration**: "
+                f"**{bottlenecks['single_owner_critical_items']} critical items** have only one owner each "
+                f"(e.g. {_join(bottlenecks['examples'])}), so losing that one person means losing that knowledge. "
+                "Assigning a second custodian to each is the fastest way to de-risk it."
+            )
+        if decay["isolated_unused_items"] > 0:
+            return (
+                f"There's no critical disease pattern active, but **{decay['isolated_unused_items']} documented "
+                f"knowledge items** (e.g. {_join(decay['examples'])}) are isolated and nobody is using them — "
+                "left alone, that's how knowledge quietly disappears. Worth a look before it becomes a bigger gap."
+            )
+        return (
+            f"Nothing alarming right now — overall health is **{health_str}**, no active disease patterns, and no "
+            "single-owner knowledge bottlenecks detected. Keep an eye on it as the organization grows."
+        )
+
+    if intent == "health_overview":
+        dims = oii.get("dimensions", {})
+        weakest = sorted(dims.items(), key=lambda kv: kv[1])[:2] if dims else []
+        text = f"Your Organizational Intelligence Index is **{health_str}** overall."
+        if weakest:
+            weak_desc = ", ".join(f"{k.replace('_', ' ')} ({v:.0%})" for k, v in weakest)
+            text += f" The dimensions pulling it down the most are {weak_desc}."
+        active = [n for n, d in diseases.items() if d.get("severity") in ("critical", "warning")]
+        if active:
+            text += f" There {'is' if len(active) == 1 else 'are'} {len(active)} active pattern(s) to watch: " + ", ".join(
+                _explain_disease(n) for n in active
+            ) + "."
+        else:
+            text += " No disease patterns are currently active."
+        return text
+
+    if intent == "succession_risk":
+        if bottlenecks["single_owner_critical_items"] > 0:
+            return (
+                f"**{bottlenecks['single_owner_critical_items']} pieces of critical knowledge** would be at risk "
+                f"if the wrong person left tomorrow — starting with {_join(bottlenecks['examples'])}. "
+                "Each of these currently has exactly one owner and no documented backup. Spreading ownership "
+                "or writing these up is the highest-leverage fix available."
+            )
+        return "Good news — no single-owner critical knowledge items were found, so no individual departure would create an immediate gap."
+
+    if intent == "action_plan":
+        actions = []
+        critical = _top_disease(diseases, ("critical", "warning"))
+        if critical:
+            name, _ = critical
+            actions.append(_DISEASE_ACTIONS.get(name, "Review and address the active disease pattern"))
+        if bottlenecks["single_owner_critical_items"] > 0:
+            actions.append("Assign a second owner to the top single-owner critical knowledge items")
+        if decay["isolated_unused_items"] > 0:
+            actions.append("Surface and re-link isolated knowledge items so they're findable again")
+        if not actions:
+            actions.append("Keep uploading documents so AION's picture of the organization stays current")
+        bullets = "\n".join(f"- {a}" for a in actions[:3])
+        return f"If I had to pick this week's priorities, in order:\n\n{bullets}"
+
+    active = [n for n, d in diseases.items() if d.get("severity") in ("critical", "warning")]
+    parts = [f"Overall health is **{health_str}**."]
+    if active:
+        parts.append("Active pattern(s): " + ", ".join(_explain_disease(n) for n in active) + ".")
+    if bottlenecks["single_owner_critical_items"] > 0:
+        parts.append(f"**{bottlenecks['single_owner_critical_items']}** knowledge items have only one owner.")
+    if decay["isolated_unused_items"] > 0:
+        parts.append(f"**{decay['isolated_unused_items']}** items are isolated and unused.")
+    parts.append("Ask me about the biggest risk, overall health, succession risk, or this week's priorities for more detail.")
+    return " ".join(parts)
+
+
+def _join(items: list) -> str:
+    names = [str(i) for i in items[:2] if i]
+    return " and ".join(names) if names else "several undocumented items"
 
 
 def _format_context(context: dict) -> str:
