@@ -25,3 +25,10 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         value: '["http://localhost:3000"]'
+      # Matches the production Vercel domain and every preview deployment
+      # for the aion-frontend project (e.g. aion-frontend-<hash>-<team>.vercel.app,
+      # aion-frontend-git-<branch>-<team>.vercel.app), so preview builds
+      # aren't locked out by CORS. If a custom domain is added later, add it
+      # to ALLOWED_ORIGINS above as well.
+      - key: ALLOWED_ORIGIN_REGEX
+        value: '^https://aion-frontend(-[a-z0-9-]+)?\.vercel\.app$'

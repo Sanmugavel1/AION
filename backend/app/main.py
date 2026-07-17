@@ -24,6 +24,7 @@ from app.core.exceptions import (
 from app.core.graph_store import graph_store
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import setup_middleware
+from scripts.seed_demo_data import seed_demo_data
 
 configure_logging()
 logger = get_logger(__name__)
@@ -40,6 +41,16 @@ async def lifespan(app: FastAPI):
         logger.info("Database connected (SQLite)")
     except Exception as e:
         logger.warning(f"Database init warning: {e}")
+
+    # Render's free tier has no persistent disk — the SQLite file (and the
+    # demo account in it) is wiped on every redeploy/cold-start. Reseed it
+    # here so demo@aion.ai always exists; the seeder is idempotent and
+    # no-ops if the demo org is already present.
+    try:
+        await seed_demo_data()
+        logger.info("Demo data verified/seeded")
+    except Exception as e:
+        logger.warning(f"Demo data seeding warning: {e}")
 
     logger.info(
         f"Graph store ready: {graph_store._graph.number_of_nodes()} nodes, "

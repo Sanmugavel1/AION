@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     ALLOWED_HOSTS: List[str] = ["*"]
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    # Regex fallback for origins that can't be pinned to one exact URL, e.g.
+    # Vercel preview deployments (a fresh subdomain per branch/PR). Checked
+    # in addition to ALLOWED_ORIGINS by CORSMiddleware. None disables it.
+    ALLOWED_ORIGIN_REGEX: Optional[str] = None
 
     # Server
     HOST: str = "0.0.0.0"

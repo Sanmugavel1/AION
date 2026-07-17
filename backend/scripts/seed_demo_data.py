@@ -5,7 +5,9 @@ Populates a realistic small organization ("Nova Robotics") across SQLite
 embedded graph store (Person/Knowledge/Project nodes + relationships), so the
 frontend has real, compelling data to render on first run.
 
-Run once from backend/: python scripts/seed_demo_data.py
+Runs automatically on every backend startup (see app/main.py lifespan) so the
+demo account survives Render's ephemeral disk. Also runnable standalone from
+backend/: python scripts/seed_demo_data.py
 Idempotent: skips creation if the demo org already exists.
 """
 from __future__ import annotations
@@ -83,8 +85,7 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-async def main() -> None:
-    await init_db()
+async def seed_demo_data() -> None:
     graph_repo = GraphRepository()
 
     async with AsyncSessionFactory() as db:
@@ -229,5 +230,10 @@ async def main() -> None:
         print(f"  users: {len(user_rows)}  knowledge_items: {len(knowledge_ids)}  projects: {len(project_ids)}")
 
 
+async def _run_standalone() -> None:
+    await init_db()
+    await seed_demo_data()
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(_run_standalone())
