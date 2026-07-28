@@ -1,0 +1,50 @@
+# Secrets — .env holds the live GROQ_API_KEY and JWT signing keys. Never commit it.
+.env
+.env.*
+!.env.example
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Local data (SQLite database + embedded graph store)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/graph_store.json
+data/attachments/*
+!data/attachments/.gitkeep
+
+# Local tooling cache
+.impeccable/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing / tooling caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

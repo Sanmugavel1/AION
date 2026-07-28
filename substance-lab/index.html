@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AION — The Organizational Nervous System</title>
+  <meta name="description" content="AION continuously senses, understands and preserves your organization's intelligence. Not a chatbot. Not a RAG tool. Your organization's digital brain." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=Instrument+Serif:ital,wght@0,400;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#FBFAF7',
+            ink: '#12281A',
+            forest: '#1E4D33',
+            emerald: '#42A85D',
+            muted: '#E4EFDA',
+          },
+          fontFamily: {
+            geist: ['Geist', 'Space Grotesk', 'sans-serif'],
+            inter: ['Inter', 'sans-serif'],
+            serifx: ['"Instrument Serif"', 'serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- AION API client -->
+  <script>
+    // In production (Vercel), point at the deployed Render backend.
+    // Locally (localhost/127.0.0.1) assets/api.js defaults to http://localhost:8001.
+    if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      window.AION_API_BASE = 'https://aion-backend.onrender.com/api/v1';
+    }
+  </script>
+  <script src="assets/api.js"></script>
+
+  <style>
+    :root { color-scheme: light; }
+    html, body { background: #FBFAF7; }
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #12281A;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Source quirk: "Space_Grotesk" is used as a class name but overridden to Geist */
+    .Space_Grotesk { font-family: 'Geist', sans-serif !important; }
+
+    .font-geist { font-family: 'Geist', 'Space Grotesk', sans-serif; }
+    .font-serifx { font-family: 'Instrument Serif', serif; font-style: italic; }
+
+    ::selection { background: #42A85D; color: #FFFFFF; }
+    :focus-visible { outline: 2px solid #42A85D; outline-offset: 3px; border-radius: 2px; }
+
+    /* Cross-page transitions */
+    @view-transition { navigation: auto; }
+    @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+    body { animation: pageIn .5s ease both; }
+
+    .label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+    }
+
+    /* ---------- Reveal mechanism ---------- */
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(48px);
+      filter: blur(10px);
+      transition: opacity .9s cubic-bezier(.22,1,.36,1),
+                  transform .9s cubic-bezier(.22,1,.36,1),
+                  filter .9s cubic-bezier(.22,1,.36,1);
+      will-change: opacity, transform, filter;
+    }
+    [data-reveal].is-in { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+    /* Word-by-word reveal */
+    [data-reveal-words] .word {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(48px);
+      filter: blur(8px);
+      transition: opacity .9s cubic-bezier(.22,1,.36,1),
+                  transform .9s cubic-bezier(.22,1,.36,1),
+                  filter .9s cubic-bezier(.22,1,.36,1);
+      will-change: opacity, transform, filter;
+    }
+    [data-reveal-words].is-in .word { opacity: 1; transform: translateY(0); filter: blur(0); }
+
+    /* Panel image entrance */
+    [data-panel-img] {
+      transform: scale(1.06) translateY(12%);
+      transition: transform 1.2s cubic-bezier(.22,1,.36,1);
+      will-change: transform;
+    }
+    [data-panel-img].is-in { transform: scale(1) translateY(0); }
+
+    /* ---------- Drift keyframes ---------- */
+    @keyframes drift1 {
+      0%   { transform: translate(0,0) rotate(0deg); }
+      50%  { transform: translate(38px,-34px) rotate(9deg); }
+      100% { transform: translate(0,0) rotate(0deg); }
+    }
+    @keyframes drift2 {
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(-46px,42px) scale(1.06); }
+      100% { transform: translate(0,0) scale(1); }
+    }
+    @keyframes drift3 {
+      0%   { transform: translate(0,0) rotate(0deg); }
+      50%  { transform: translate(34px,48px) rotate(-7deg); }
+      100% { transform: translate(0,0) rotate(0deg); }
+    }
+    .drift-a { animation: drift1 16s ease-in-out infinite; }
+    .drift-b { animation: drift2 22s ease-in-out infinite; }
+    .drift-c { animation: drift3 24s ease-in-out infinite; }
+
+    /* Wordmark — etched architectural glass.
+       Linear's display rules applied: aggressive negative tracking (-3.0px/80px ≈ -0.0375em),
+       depth from hairline edges rather than stacked drop shadows, no decorative gradients. */
+    /* Original Substance Lab wordmark: 10% forest fill + 1px stroke, Geist 600 */
+    .wordmark {
+      font-family: 'Geist', 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.05em;
+      line-height: 0.8;
+      user-select: none;
+    }
+    .wordmark > span {
+      color: rgba(30,77,51,0.10);
+      -webkit-text-stroke: 1px rgba(30,77,51,0.18);
+    }
+
+    /* Footer statement stroke */
+    .statement {
+      font-family: 'Geist', 'Space Grotesk', sans-serif;
+      font-weight: 300;
+      letter-spacing: -0.05em;
+      line-height: 0.85;
+    }
+
+
+    /* Dot logo */
+    .dotgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .dotgrid span { width: 5px; height: 5px; border-radius: 999px; display: block; }
+
+    /* Capabilities — expand to explain each layer on hover / tap */
+    .cap-row { cursor: pointer; transition: border-color .5s ease; }
+    .cap-row:hover, .cap-row.cap-open { border-color: rgba(66,168,93,0.5); }
+    .cap-title { transition: transform .5s cubic-bezier(.22,1,.36,1), color .3s ease; }
+    .cap-row:hover .cap-title, .cap-row.cap-open .cap-title { transform: translateX(.5rem); color: #42A85D; }
+    .cap-num { transition: color .3s ease; }
+    .cap-row:hover .cap-num, .cap-row.cap-open .cap-num { color: #42A85D; }
+    .cap-desc { max-height: 0; overflow: hidden; opacity: 0; transition: max-height .55s cubic-bezier(.22,1,.36,1), opacity .45s ease .05s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; }
+      [data-reveal], [data-reveal-words] .word, [data-panel-img] {
+        transition: opacity .4s ease !important;
+        transform: none !important;
+        filter: none !important;
+      }
+      [data-reveal], [data-reveal-words] .word { opacity: 0; }
+      [data-reveal].is-in, [data-reveal-words].is-in .word { opacity: 1; }
+      [data-parallax] { transform: none !important; }
+    }
+  </style>
+</head>
+
+<body class="antialiased">
+
+  <!-- ============ NAVIGATION ============ -->
+  <nav class="fixed top-7 left-1/2 -translate-x-1/2 z-50 w-[min(92%,860px)]">
+    <div class="flex items-center justify-between gap-4 rounded-full border border-black/10 bg-white/90 backdrop-blur-md px-3 py-1.5 shadow-[0_20px_25px_-5px_rgba(0,0,0,0.10)]">
+      <a href="#top" class="flex items-center gap-2.5 pl-2 pr-1">
+        <span class="dotgrid" aria-hidden="true">
+          <span style="background:#42A85D"></span><span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span>
+          <span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span>
+          <span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span><span style="background:#42A85D"></span>
+        </span>
+        <span class="font-geist text-[15px] font-medium tracking-tight text-ink">AION</span>
+      </a>
+
+      <div class="hidden md:flex items-center gap-7 text-[13px] font-medium text-ink/70">
+        <a href="#work" class="hover:text-ink transition-colors">Modules</a>
+        <a href="#enterprise" class="hover:text-ink transition-colors">Enterprise</a>
+        <a href="#method" class="hover:text-ink transition-colors">Method</a>
+        <a href="#capabilities" class="hover:text-ink transition-colors">Capabilities</a>
+        <a href="#contact" class="hover:text-ink transition-colors">Contact</a>
+        <a href="#" data-login class="text-forest hover:text-emerald transition-colors">Sign in</a>
+      </div>
+
+      <a href="#contact" class="rounded-full bg-forest px-5 py-2.5 text-[13px] font-medium text-white shadow-[0_10px_15px_rgba(30,77,51,0.30)] hover:bg-forest/90 transition-colors">
+        Start a project
+      </a>
+    </div>
+  </nav>
+
+  <span id="top"></span>
+
+  <!-- ============ SECTION 1 · HERO ============ -->
+  <header class="relative min-h-screen flex items-center overflow-hidden">
+    <!-- Video layer -->
+    <video class="absolute inset-0 w-full h-full object-cover scale-110 opacity-90 z-0"
+           muted loop playsinline preload="auto"
+           poster="">
+      <source src="https://hoirqrkdgbmvpwutwuwj.supabase.co/storage/v1/object/public/generated-videos/9109ecbb-cdc4-4815-981e-2ea83be13765/1782999286314-2d8dfd1d-f5c0-4ad1-81a1-2055a64391da.mp4" type="video/mp4" />
+    </video>
+
+    <!-- Drift shapes -->
+    <div class="pointer-events-none absolute inset-0 z-[1]" aria-hidden="true">
+      <div class="drift-a absolute top-[14%] left-[8%] h-56 w-56 rounded-full bg-gradient-to-br from-white/40 to-emerald/20 backdrop-blur-xl shadow-[inset_0_1px_20px_rgba(255,255,255,0.35)]"></div>
+      <div class="drift-b absolute top-[30%] right-[10%] h-72 w-72 rounded-[38%] bg-gradient-to-tr from-emerald/25 to-white/30 backdrop-blur-2xl shadow-[inset_0_1px_24px_rgba(255,255,255,0.30)]"></div>
+      <div class="drift-c absolute bottom-[24%] left-[24%] h-40 w-40 rounded-3xl bg-gradient-to-b from-white/30 to-forest/10 backdrop-blur-lg rotate-6"></div>
+      <div class="drift-a absolute top-[52%] right-[30%] h-28 w-28 rounded-full bg-gradient-to-br from-white/35 to-emerald/15 backdrop-blur-md"></div>
+      <div class="drift-c absolute top-[18%] right-[42%] h-20 w-20 rounded-2xl bg-white/25 backdrop-blur-sm"></div>
+    </div>
+
+    <!-- Gradient overlays -->
+    <div class="absolute inset-0 z-[2] bg-gradient-to-t from-[#FBFAF7]/55 via-transparent to-transparent" aria-hidden="true"></div>
+    <div class="absolute inset-0 z-[2] bg-gradient-to-l from-[#FBFAF7]/60 via-transparent to-transparent" aria-hidden="true"></div>
+
+    <!-- Full-bleed wordmark (midground), letters spread edge-to-edge -->
+    <div class="absolute bottom-[7vh] left-0 right-0 z-[3]" aria-hidden="true">
+      <div class="wordmark flex items-end justify-between px-[5vw] text-[19.5vw] leading-[0.8] pb-[0.05em]" data-parallax="0.06">
+        <span>A</span><span>I</span><span>O</span><span>N</span>
+      </div>
+    </div>
+
+    <!-- Bottom fade — dissolves video + wordmark into the next section (no hard cut) -->
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[52vh]" aria-hidden="true"
+         style="background:linear-gradient(to bottom, rgba(251,250,247,0) 0%, rgba(251,250,247,0.55) 42%, rgba(251,250,247,0.92) 70%, #FBFAF7 88%, #FBFAF7 100%);"></div>
+
+    <!-- Foreground content (vertically centered) -->
+    <div class="relative z-20 mx-auto w-full max-w-6xl px-6 pt-20">
+      <p data-reveal class="label text-forest/70 mb-6">Organizational Nervous System — est. 2026</p>
+      <h1 data-reveal-words class="font-geist font-light tracking-[-0.05em] text-ink text-[10.5vw] leading-[0.92] sm:text-6xl md:text-7xl lg:text-[5.6rem] max-w-4xl">
+        An organization that senses, remembers and <em class="font-serifx not-italic text-forest">heals</em> itself.
+      </h1>
+      <div data-reveal class="mt-9 flex flex-wrap items-center gap-4">
+        <a href="#work" class="rounded-full bg-forest px-7 py-3.5 text-sm font-medium text-white shadow-[0_10px_15px_rgba(30,77,51,0.30)] hover:bg-forest/90 transition-colors">Explore the system</a>
+        <a href="#method" class="rounded-full border border-black/15 bg-white/70 backdrop-blur px-7 py-3.5 text-sm font-medium text-ink hover:bg-white transition-colors">How it works</a>
+        <span class="ml-1 max-w-xs text-sm text-ink/60">People leave. Knowledge shouldn't. AION preserves your organization's intelligence.</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ SECTION 2 · PROJECT REEL ============ -->
+  <section id="work" class="relative bg-bg px-6 pt-36 pb-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-14 flex flex-wrap items-end justify-between gap-6">
+        <h2 data-reveal-words class="font-geist font-light tracking-[-0.05em] text-ink text-4xl md:text-5xl max-w-xl">
+          Five modules, one living <em class="font-serifx not-italic text-forest">system</em>.<br class="hidden md:block" /><span class="text-2xl md:text-3xl text-ink/45">Now wrapped in an enterprise shell.</span>
+        </h2>
+        <p data-reveal class="label text-forest/60">Core Modules</p>
+      </div>
+
+      <!-- Project 01 — full width -->
+      <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+        <div class="aspect-[16/9] w-full overflow-hidden">
+          <img data-panel-img class="h-full w-full object-cover" loading="lazy" alt="Organizational Memory Graph network visualization"
+               src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1920&h=1080&q=80" />
+        </div>
+        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent"></div>
+        <div class="absolute inset-x-0 bottom-0 p-7 md:p-10">
+          <div class="mb-3 flex gap-2">
+            <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Memory Graph</span>
+            <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Real-time</span>
+            <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">NetworkX</span>
+          </div>
+          <h3 class="font-geist text-2xl md:text-3xl font-light tracking-tight text-white">Organizational Memory Graph — every person, skill &amp; dependency, mapped</h3>
+        </div>
+        <span class="absolute top-6 left-7 font-geist text-sm text-white/70">01</span>
+      </article>
+
+      <!-- Project 02 & 03 — asymmetric two-column -->
+      <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy" alt="Knowledge Decay Engine visualization"
+                 src="https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Decay Engine</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Half-life</span>
+            </div>
+            <h3 class="font-geist text-2xl font-light tracking-tight text-white">Knowledge Decay Engine — see what's quietly being forgotten</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">02</span>
+        </article>
+
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy" alt="Disease Detection module visualization"
+                 src="https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Detection</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">5 Diseases</span>
+            </div>
+            <h3 class="font-geist text-2xl font-light tracking-tight text-white">Disease Detection — five organizational pathologies, scanned</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">03</span>
+        </article>
+      </div>
+
+      <!-- Project 04 — full bleed -->
+      <article data-reveal class="mt-8 group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+        <div class="aspect-[21/9] w-full overflow-hidden">
+          <img data-panel-img class="h-full w-full object-cover" loading="lazy" alt="Future Simulation and Self-Healing visualization"
+               src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=2000&h=860&q=80" />
+        </div>
+        <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent"></div>
+        <div class="absolute inset-x-0 bottom-0 p-7 md:p-10">
+          <div class="mb-3 flex gap-2">
+            <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Simulation</span>
+            <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Self-Healing</span>
+          </div>
+          <h3 class="font-geist text-2xl md:text-3xl font-light tracking-tight text-white">Future Simulation &amp; Self-Healing — model any departure before it happens</h3>
+        </div>
+        <span class="absolute top-6 left-7 font-geist text-sm text-white/70">04</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2b · ENTERPRISE LAYER ============ -->
+  <section id="enterprise" class="relative bg-bg px-6 pt-4 pb-24">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-14 flex flex-wrap items-end justify-between gap-6">
+        <h2 data-reveal-words class="font-geist font-light tracking-[-0.05em] text-ink text-4xl md:text-5xl max-w-xl">
+          Built for how companies actually <em class="font-serifx not-italic text-forest">work</em>.
+        </h2>
+        <p data-reveal class="label text-forest/60">Enterprise Layer</p>
+      </div>
+
+      <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy"
+                 alt="Executive leadership reviewing organizational performance"
+                 src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex flex-wrap gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Command Center</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Executive</span>
+            </div>
+            <h3 class="font-geist text-xl md:text-2xl font-light tracking-tight text-white">Leadership sees the whole company, every figure traced to its department</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">06</span>
+        </article>
+
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy"
+                 alt="Colleagues reviewing and approving documentation together"
+                 src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex flex-wrap gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Six departments</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Approvals</span>
+            </div>
+            <h3 class="font-geist text-xl md:text-2xl font-light tracking-tight text-white">Employee to manager to department head, with isolation enforced on the server</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">07</span>
+        </article>
+
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy"
+                 alt="Teams exchanging shared working practices across departments"
+                 src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex flex-wrap gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Marketplace</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Reuse</span>
+            </div>
+            <h3 class="font-geist text-xl md:text-2xl font-light tracking-tight text-white">One team stops solving what another already solved</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">08</span>
+        </article>
+
+        <article data-reveal class="group relative overflow-hidden rounded-2xl shadow-2xl shadow-black/15">
+          <div class="aspect-[4/5] w-full overflow-hidden">
+            <img data-panel-img class="h-full w-full object-cover" loading="lazy"
+                 alt="Colleague being shown internal documentation by a more experienced teammate"
+                 src="https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1200&h=1500&q=80" />
+          </div>
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30"></div>
+          <div class="absolute inset-x-0 bottom-0 p-7">
+            <div class="mb-3 flex flex-wrap gap-2">
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Learning</span>
+              <span class="rounded-full border border-white/30 px-3 py-1 text-xs text-white/90">Skill gaps</span>
+            </div>
+            <h3 class="font-geist text-xl md:text-2xl font-light tracking-tight text-white">Names the gap, then points at what to read</h3>
+          </div>
+          <span class="absolute top-6 left-7 font-geist text-sm text-white/70">10</span>
+        </article>
+      </div>
+
+      <!-- Live counts, pulled from the running backend rather than typed in. -->
+      <dl id="ent-stats" data-reveal class="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-4">
+        <div class="bg-bg px-6 py-7">
+          <dt class="label text-forest/60">Departments</dt>
+          <dd id="stat-depts" class="mt-2 font-geist text-3xl font-light text-ink">—</dd>
+        </div>
+        <div class="bg-bg px-6 py-7">
+          <dt class="label text-forest/60">Role tiers</dt>
+          <dd id="stat-roles" class="mt-2 font-geist text-3xl font-light text-ink">5</dd>
+        </div>
+        <div class="bg-bg px-6 py-7">
+          <dt class="label text-forest/60">Live endpoints</dt>
+          <dd id="stat-endpoints" class="mt-2 font-geist text-3xl font-light text-ink">—</dd>
+        </div>
+        <div class="bg-bg px-6 py-7">
+          <dt class="label text-forest/60">Core modules</dt>
+          <dd id="stat-knowledge" class="mt-2 font-geist text-3xl font-light text-ink">—</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 3 · STUDIO METHOD ============ -->
+  <section id="method" class="relative px-6 py-28" style="background:#E4EFDA;">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-16 max-w-2xl">
+        <p data-reveal class="label text-forest/70 mb-5">How AION works</p>
+        <h2 data-reveal-words class="font-geist font-light tracking-[-0.05em] text-forest text-4xl md:text-5xl leading-[0.98]">
+          From raw signal to living <em class="font-serifx not-italic">memory</em>.
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+        <!-- Card 01 -->
+        <div data-reveal class="flex flex-col">
+          <div class="overflow-hidden rounded-2xl aspect-[3/2]">
+            <img class="h-full w-full object-cover transition-transform duration-700 hover:scale-105" loading="lazy" alt="AION sensing knowledge sources"
+                 src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=format&fit=crop&w=1200&h=800&q=80" />
+          </div>
+          <span class="mt-6 font-geist text-sm text-forest/60">01</span>
+          <h3 class="mt-1 font-geist text-2xl font-light tracking-tight text-forest">Sense</h3>
+          <p class="mt-3 text-[15px] text-ink/70">AION ingests documents, messages and code to sense where knowledge actually lives — no manual tagging required.</p>
+        </div>
+        <!-- Card 02 -->
+        <div data-reveal class="flex flex-col" style="transition-delay:.08s">
+          <div class="overflow-hidden rounded-2xl aspect-[3/2]">
+            <img class="h-full w-full object-cover transition-transform duration-700 hover:scale-105" loading="lazy" alt="AION mapping people to knowledge"
+                 src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&h=800&q=80" />
+          </div>
+          <span class="mt-6 font-geist text-sm text-forest/60">02</span>
+          <h3 class="mt-1 font-geist text-2xl font-light tracking-tight text-forest">Understand</h3>
+          <p class="mt-3 text-[15px] text-ink/70">It maps people to knowledge and scores resilience, decay and single-owner risk across the org in real time.</p>
+        </div>
+        <!-- Card 03 -->
+        <div data-reveal class="flex flex-col" style="transition-delay:.16s">
+          <div class="overflow-hidden rounded-2xl aspect-[3/2]">
+            <img class="h-full w-full object-cover transition-transform duration-700 hover:scale-105" loading="lazy" alt="AION self-healing recommendations"
+                 src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&h=800&q=80" />
+          </div>
+          <span class="mt-6 font-geist text-sm text-forest/60">03</span>
+          <h3 class="mt-1 font-geist text-2xl font-light tracking-tight text-forest">Preserve &amp; heal</h3>
+          <p class="mt-3 text-[15px] text-ink/70">When risk spikes, AION recommends the fix and routes it to the right owner — before the knowledge is lost.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 4 · CAPABILITIES ============ -->
+  <section id="capabilities" class="relative px-6 py-28" style="background:#1E4D33;">
+    <div class="mx-auto max-w-6xl">
+      <div class="mb-8 max-w-2xl">
+        <p data-reveal class="label text-emerald mb-5">Capabilities</p>
+        <h2 data-reveal-words class="font-geist font-light tracking-[-0.05em] text-white text-4xl md:text-5xl leading-[0.98]">
+          What AION makes <em class="font-serifx not-italic text-emerald">visible</em>.
+        </h2>
+        <p data-reveal class="mt-5 text-sm text-white/50">Hover or tap a layer to see what it does.</p>
+      </div>
+
+      <ul class="mt-4">
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Organizational Intelligence Index</span>
+              <span class="cap-num label text-white/40 shrink-0">01</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">One health score from 12 live signals — velocity, coverage, resilience, collaboration and more — the whole organization's cognitive health at a glance.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Knowledge Decay &amp; Half-life</span>
+              <span class="cap-num label text-white/40 shrink-0">02</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">Every document has a half-life. AION measures how fast each domain goes stale and surfaces what's being quietly forgotten — before it's gone.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Disease Detection</span>
+              <span class="cap-num label text-white/40 shrink-0">03</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">A continuous scan for five organizational pathologies — cancer, Alzheimer's, communication stroke, obesity and cognitive decline — each with a severity score and days-to-critical.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Future Simulation</span>
+              <span class="cap-num label text-white/40 shrink-0">04</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">Model a what-if before it's real: simulate a key departure or a department closure and watch the cascade of knowledge, projects and revenue at risk.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Self-Healing &amp; Board Advisor</span>
+              <span class="cap-num label text-white/40 shrink-0">05</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">AION doesn't just diagnose — it recommends the fix, routes it to the right owner, and briefs your board in plain language grounded in live data.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Executive Command Center</span>
+              <span class="cap-num label text-white/40 shrink-0">06</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">One screen that answers the questions leadership actually asks: which department is losing knowledge fastest, which is most at risk, where training should go. Each answer traces back to the department that produced it.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Departments &amp; Approval Chain</span>
+              <span class="cap-num label text-white/40 shrink-0">07</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">Six isolated department workspaces with a real approval chain: employee, then manager, then department head. Isolation is enforced on the server, not hidden in the interface, and every decision leaves an immutable trail.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Cross-Department Marketplace</span>
+              <span class="cap-num label text-white/40 shrink-0">08</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">Teams keep their own files private by default. Anything approved can be published for the rest of the company to borrow, rate and reuse, so one team stops solving what another already solved.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Risk Prediction &amp; Memory Timeline</span>
+              <span class="cap-num label text-white/40 shrink-0">09</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">Forward-looking warnings that state how likely they are, why, what it costs to ignore them and what to do, alongside a searchable chronological record of everything the organization has learned.</p></div></div>
+          </div>
+        </li>
+        <li>
+          <div class="cap-row border-t border-b border-white/10 py-7" data-cap>
+            <div class="flex items-center justify-between gap-4">
+              <span class="cap-title font-geist text-2xl md:text-4xl font-light tracking-tight text-white">Learning Center</span>
+              <span class="cap-num label text-white/40 shrink-0">10</span>
+            </div>
+            <div class="cap-desc"><div><p class="max-w-2xl pt-4 text-[15px] leading-relaxed text-white/65">When a subject is barely written down, AION points at the documents that do cover it rather than only naming the gap. Effectiveness is measured against what actually changed afterwards, not against course completions.</p></div></div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ QUOTE BLOCK ============ -->
+  <section class="px-6 pt-28 pb-20 bg-bg">
+    <div class="mx-auto max-w-5xl">
+      <div class="grid grid-cols-1 gap-10 md:grid-cols-[1.4fr_1fr] md:items-center">
+        <div data-reveal>
+          <i data-lucide="quote" class="mb-6 h-10 w-10 text-emerald"></i>
+          <blockquote class="font-geist text-3xl md:text-4xl font-light leading-[1.15] tracking-[-0.03em] text-ink">
+            Every departure is a memory-loss event. AION is the part of your organization that <em class="font-serifx not-italic text-forest">remembers</em>.
+          </blockquote>
+          <p class="mt-7 text-sm text-ink/60">The AION principle</p>
+        </div>
+        <div data-reveal class="overflow-hidden rounded-2xl shadow-2xl shadow-black/15 aspect-[4/5]">
+          <img class="h-full w-full object-cover" loading="lazy" alt="An empty desk after a departure — the knowledge that leaves with someone"
+               src="https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&w=1200&h=1500&q=80" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 5 · CONTACT & FOOTER ============ -->
+  <section id="contact" class="relative overflow-hidden bg-bg px-6 pt-4 pb-14">
+    <!-- Massive parallax statement -->
+    <div class="pointer-events-none relative flex justify-center overflow-hidden" aria-hidden="true">
+      <h2 class="statement whitespace-nowrap text-[13vw] text-forest/10" data-parallax="-0.3">MAKE INTELLIGENCE LAST</h2>
+    </div>
+
+    <div class="mx-auto -mt-6 max-w-5xl">
+      <div class="grid grid-cols-1 gap-14 md:grid-cols-2">
+        <div data-reveal>
+          <p class="label text-forest/70 mb-5">Contact</p>
+          <h3 class="font-geist text-3xl md:text-4xl font-light tracking-[-0.04em] text-ink leading-[1.05]">
+            See your organization's <em class="font-serifx not-italic text-forest">mind</em>.
+          </h3>
+          <p class="mt-5 max-w-sm text-[15px] text-ink/65">Book a walkthrough on your own data — or sign in to the live demo. We reply within two working days.</p>
+        </div>
+
+        <form data-reveal class="flex flex-col gap-7" onsubmit="event.preventDefault(); this.reset();">
+          <div>
+            <label class="label block text-ink/45 mb-2">Name</label>
+            <input type="text" required class="w-full border-0 border-b border-black/20 bg-transparent py-3 text-ink outline-none transition-colors focus:border-emerald" placeholder="Your name" />
+          </div>
+          <div>
+            <label class="label block text-ink/45 mb-2">Email</label>
+            <input type="email" required class="w-full border-0 border-b border-black/20 bg-transparent py-3 text-ink outline-none transition-colors focus:border-emerald" placeholder="you@company.com" />
+          </div>
+          <div>
+            <label class="label block text-ink/45 mb-2">Organization</label>
+            <input type="text" class="w-full border-0 border-b border-black/20 bg-transparent py-3 text-ink outline-none transition-colors focus:border-emerald" placeholder="Where you work" />
+          </div>
+          <button type="submit" class="mt-2 self-start rounded-full bg-forest px-8 py-3.5 text-sm font-medium text-white shadow-[0_10px_15px_rgba(30,77,51,0.30)] hover:bg-forest/90 transition-colors">
+            Request access
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer -->
+      <footer class="mt-24 flex flex-col gap-8 border-t border-black/10 pt-10 md:flex-row md:items-center md:justify-between">
+        <a href="#top" class="flex items-center gap-3">
+          <span class="dotgrid" aria-hidden="true">
+            <span style="background:#42A85D"></span><span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span>
+            <span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span>
+            <span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span><span style="background:#42A85D"></span>
+          </span>
+          <span class="font-geist text-[15px] font-medium tracking-tight text-ink">AION</span>
+        </a>
+
+        <nav class="flex flex-wrap gap-x-8 gap-y-3 text-sm text-ink/60">
+          <a href="#work" class="hover:text-forest transition-colors">Modules</a>
+          <a href="#enterprise" class="hover:text-forest transition-colors">Enterprise</a>
+          <a href="#method" class="hover:text-forest transition-colors">Method</a>
+          <a href="#capabilities" class="hover:text-forest transition-colors">Capabilities</a>
+          <a href="#contact" class="hover:text-forest transition-colors">Contact</a>
+          <a href="#" class="hover:text-forest transition-colors">Docs</a>
+          <a href="#" class="hover:text-forest transition-colors">GitHub</a>
+          <a href="#" data-login class="text-forest hover:text-emerald transition-colors">Sign in</a>
+        </nav>
+
+        <p class="text-sm text-ink/40">© 2026 AION</p>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ============ LOGIN MODAL ============ -->
+  <div id="auth-modal" class="fixed inset-0 z-[60] hidden items-center justify-center px-6">
+    <div data-auth-close class="absolute inset-0 bg-ink/40 backdrop-blur-sm"></div>
+    <div class="relative w-full max-w-md rounded-2xl border border-black/10 bg-bg p-8 shadow-[0_20px_25px_-5px_rgba(0,0,0,0.25)]">
+      <button data-auth-close class="absolute right-5 top-5 text-ink/40 hover:text-ink transition-colors" aria-label="Close">
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+      <span class="dotgrid mb-5" aria-hidden="true">
+        <span style="background:#42A85D"></span><span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span>
+        <span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span>
+        <span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span><span style="background:#42A85D"></span>
+      </span>
+      <p class="label text-forest/70 mb-2">AION Access</p>
+      <h3 class="font-geist text-2xl font-light tracking-tight text-ink">Sign in to the <em class="font-serifx not-italic text-forest">nervous system</em>.</h3>
+      <form id="auth-form" class="mt-6 flex flex-col gap-5">
+        <div>
+          <label class="label block text-ink/45 mb-2" for="auth-email">Email</label>
+          <input id="auth-email" type="email" required autocomplete="username" placeholder="you@company.example"
+                 class="w-full border-0 border-b border-black/20 bg-transparent py-3 text-ink outline-none transition-colors focus:border-emerald" />
+        </div>
+        <div>
+          <label class="label block text-ink/45 mb-2" for="auth-password">Password</label>
+          <input id="auth-password" type="password" required autocomplete="current-password" placeholder="Your password"
+                 class="w-full border-0 border-b border-black/20 bg-transparent py-3 text-ink outline-none transition-colors focus:border-emerald" />
+        </div>
+        <p id="auth-error" class="hidden text-sm" style="color:#C0492B"></p>
+        <button type="submit" id="auth-submit"
+                class="mt-1 rounded-full bg-forest px-7 py-3.5 text-sm font-medium text-white shadow-[0_10px_15px_rgba(30,77,51,0.30)] hover:bg-forest/90 transition-colors disabled:opacity-60">
+          Enter dashboard
+        </button>
+        <p class="text-xs text-ink/45">Sign in as any employee, head or admin. Demo password for every account —
+          <span class="text-ink/70">DemoPass123!</span> · admin <span class="text-ink/70">demo@aion.ai</span></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Lucide -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <script>
+    (function () {
+      'use strict';
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* ---- Icons ---- */
+      if (window.lucide) window.lucide.createIcons();
+
+      /* ---- Word splitting (preserves inline elements like <em>) ---- */
+      document.querySelectorAll('[data-reveal-words]').forEach(function (el) {
+        var nodes = Array.prototype.slice.call(el.childNodes);
+        el.textContent = '';
+        var i = 0;
+        nodes.forEach(function (node) {
+          if (node.nodeType === 3) {
+            var parts = node.textContent.split(/(\s+)/);
+            parts.forEach(function (part) {
+              if (part === '') return;
+              if (/^\s+$/.test(part)) { el.appendChild(document.createTextNode(part)); return; }
+              var s = document.createElement('span');
+              s.className = 'word';
+              s.textContent = part;
+              s.style.transitionDelay = (i * 45) + 'ms';
+              el.appendChild(s);
+              i++;
+            });
+          } else if (node.nodeType === 1) {
+            node.classList.add('word');
+            node.style.transitionDelay = (i * 45) + 'ms';
+            el.appendChild(node);
+            i++;
+          }
+        });
+      });
+
+      /* ---- Reveal on scroll ---- */
+      var revealEls = document.querySelectorAll('[data-reveal], [data-reveal-words], [data-panel-img]');
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+          });
+        }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+        revealEls.forEach(function (el) { io.observe(el); });
+      } else {
+        revealEls.forEach(function (el) { el.classList.add('is-in'); });
+      }
+
+      /* ---- Video controller: play at 35% in view, pause when out ---- */
+      if ('IntersectionObserver' in window) {
+        var vio = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            var v = e.target;
+            if (e.isIntersecting) { var p = v.play(); if (p && p.catch) p.catch(function () {}); }
+            else { v.pause(); }
+          });
+        }, { threshold: 0.35 });
+        document.querySelectorAll('video').forEach(function (v) { vio.observe(v); });
+      }
+
+      /* ---- Parallax ---- */
+      var parallaxEls = document.querySelectorAll('[data-parallax]');
+      if (!reduce && parallaxEls.length) {
+        var ticking = false;
+        function apply() {
+          var y = window.scrollY || window.pageYOffset;
+          parallaxEls.forEach(function (el) {
+            var speed = parseFloat(el.getAttribute('data-parallax')) || 0;
+            el.style.transform = 'translateY(' + (y * speed) + 'px)';
+          });
+          ticking = false;
+        }
+        window.addEventListener('scroll', function () {
+          if (!ticking) { window.requestAnimationFrame(apply); ticking = true; }
+        }, { passive: true });
+        apply();
+      }
+
+      /* ---- Capabilities: hover / tap a layer to expand its explanation ---- */
+      var capRows = document.querySelectorAll('[data-cap]');
+      function capClose(r) {
+        var d = r.querySelector('.cap-desc');
+        d.style.setProperty('max-height', '0px', 'important');
+        d.style.setProperty('opacity', '0', 'important');
+        r.classList.remove('cap-open');
+      }
+      function capOpen(r) {
+        var d = r.querySelector('.cap-desc');
+        d.style.setProperty('max-height', d.scrollHeight + 'px', 'important');
+        d.style.setProperty('opacity', '1', 'important');
+        r.classList.add('cap-open');
+      }
+      var fine = window.matchMedia('(pointer: fine)').matches;
+      capRows.forEach(function (row) {
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        function toggle() {
+          var wasOpen = row.classList.contains('cap-open');
+          capRows.forEach(capClose);
+          if (!wasOpen) capOpen(row);
+        }
+        row.addEventListener('click', toggle);
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        });
+        if (fine) {
+          row.addEventListener('mouseenter', function () { capRows.forEach(capClose); capOpen(row); });
+          row.addEventListener('mouseleave', function () { capClose(row); });
+        }
+      });
+    })();
+
+    /* ---- Login modal + auth wiring ---- */
+    (function () {
+      'use strict';
+      var modal = document.getElementById('auth-modal');
+      if (!modal) return;
+      function open() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(function () { var e = document.getElementById('auth-email'); if (e) e.focus(); }, 60);
+      }
+      function close() { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+      var authed = window.AION && AION.isAuthed();
+      document.querySelectorAll('[data-login]').forEach(function (b) {
+        if (authed) {
+          b.textContent = 'Dashboard';
+          b.addEventListener('click', function (e) { e.preventDefault(); location.href = 'dashboard.html'; });
+        } else {
+          b.addEventListener('click', function (e) { e.preventDefault(); open(); });
+        }
+      });
+      document.querySelectorAll('[data-auth-close]').forEach(function (b) { b.addEventListener('click', close); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+      if (/[?&]auth=1/.test(location.search) && !authed) open();
+
+      var form = document.getElementById('auth-form');
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var err = document.getElementById('auth-error');
+          var btn = document.getElementById('auth-submit');
+          err.classList.add('hidden');
+          var label = btn.textContent;
+          btn.textContent = 'Signing in…';
+          btn.disabled = true;
+          AION.login(
+            document.getElementById('auth-email').value.trim(),
+            document.getElementById('auth-password').value
+          ).then(function () {
+            location.href = 'dashboard.html';
+          }).catch(function (ex) {
+            err.textContent = ex.message || 'Login failed. Check the backend is running on :8001.';
+            err.classList.remove('hidden');
+            btn.textContent = label;
+            btn.disabled = false;
+          });
+        });
+      }
+
+      /* ---- Enterprise counters ----------------------------------------------
+         Read from the running backend so the marketing page cannot claim more
+         than the deployment actually ships. If the API is unreachable the tiles
+         stay at their em-dash rather than showing an invented number. */
+      (function () {
+        // Scoped locally — the `reduce` defined in the other script block is not
+        // visible from here.
+        var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var base = (window.AION && AION.API_BASE) || 'http://localhost:8001/api/v1';
+        var targets = {
+          'stat-depts': 'departments_supported',
+          'stat-roles': 'role_tiers',
+          'stat-endpoints': 'api_endpoints',
+          'stat-knowledge': 'core_modules'
+        };
+        fetch(base + '/public/platform')
+          .then(function (r) {
+            if (!r.ok) throw new Error('platform facts returned HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            Object.keys(targets).forEach(function (id) {
+              var node = document.getElementById(id);
+              var val = d[targets[id]];
+              if (!node || val == null) return;
+
+              // Write the real value first so the tile is correct even if the
+              // count-up never runs — requestAnimationFrame is throttled whenever
+              // the page is not compositing (background tab, hidden preview pane).
+              node.textContent = val;
+              if (prefersReduced || typeof requestAnimationFrame !== 'function') return;
+
+              // requestAnimationFrame stops firing whenever the page is not
+              // compositing (background tab, hidden pane). Without a guaranteed
+              // settle the count-up freezes part-way and the tile is left showing a
+              // number that is simply wrong — worse than never animating. This timer
+              // is independent of rAF and always lands on the true value.
+              var t0 = null, dur = 900, settled = false;
+              function finish() {
+                if (settled) return;
+                settled = true;
+                node.textContent = val;
+              }
+              setTimeout(finish, dur + 250);
+              requestAnimationFrame(function step(now) {
+                if (settled) return;
+                if (t0 === null) t0 = now;
+                var p = Math.min(1, (now - t0) / dur);
+                node.textContent = Math.round(val * (1 - Math.pow(1 - p, 3)));
+                if (p < 1) requestAnimationFrame(step);
+                else finish();
+              });
+            });
+          })
+          .catch(function (e) {
+            // Leave the em-dash rather than inventing a number, but say why.
+            console.warn('AION: could not load platform facts —', e.message);
+          });
+      })();
+    })();
+  </script>
+</body>
+</html>

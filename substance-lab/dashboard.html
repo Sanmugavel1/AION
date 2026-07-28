@@ -1,0 +1,2971 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AION · Organizational Nervous System</title>
+  <meta name="description" content="AION dashboard: sense, understand and preserve your organization's intelligence." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#FBFAF7', ink: '#12281A', forest: '#1E4D33', emerald: '#42A85D', muted: '#E4EFDA',
+            amber: '#C79A2E', danger: '#C0492B',
+          },
+          fontFamily: {
+            geist: ['Geist', 'Space Grotesk', 'sans-serif'],
+            inter: ['Inter', 'sans-serif'],
+            serifx: ['"Instrument Serif"', 'serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <script>
+    // In production (Vercel), point at the deployed Render backend.
+    // Locally (localhost/127.0.0.1) assets/api.js defaults to http://localhost:8001.
+    if (!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      window.AION_API_BASE = 'https://aion-backend.onrender.com/api/v1';
+    }
+  </script>
+  <script src="assets/api.js"></script>
+
+  <style>
+    :root { color-scheme: light; }
+    html, body { background: #FBFAF7; }
+    body { font-family: 'Inter', sans-serif; color: #12281A; -webkit-font-smoothing: antialiased; }
+    .font-geist { font-family: 'Geist', 'Space Grotesk', sans-serif; }
+    .font-serifx { font-family: 'Instrument Serif', serif; font-style: italic; }
+    ::selection { background: #42A85D; color: #fff; }
+    :focus-visible { outline: 2px solid #42A85D; outline-offset: 3px; border-radius: 2px; }
+    .label { font-family: 'Space Grotesk', sans-serif; font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; }
+
+    .dotgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .dotgrid span { width: 5px; height: 5px; border-radius: 999px; display: block; }
+
+    /* Depth from a hairline edge + surface lift, not stacked shadows (Linear's model,
+       adapted to a light canvas: one whisper shadow, the border carries the form). */
+    .card {
+      background: #fff;
+      border: 1px solid rgba(18,40,26,0.10);
+      border-radius: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 1px 2px rgba(18,40,26,0.04);
+      transition: border-color .25s ease, box-shadow .25s ease, background-color .25s ease;
+    }
+    .card:hover {
+      border-color: rgba(18,40,26,0.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 10px rgba(18,40,26,0.06);
+    }
+
+    [data-reveal] {
+      opacity: 0; transform: translateY(28px); filter: blur(8px);
+      transition: opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1), filter .8s cubic-bezier(.22,1,.36,1);
+    }
+    [data-reveal].is-in { opacity: 1; transform: none; filter: blur(0); }
+
+    .meter { height: 6px; border-radius: 999px; background: rgba(18,40,26,0.10); overflow: hidden; }
+    .meter > i { display: block; height: 100%; width: 100%; border-radius: 999px; background: #1E4D33; transform: scaleX(0); transform-origin: left; transition: transform 1.1s cubic-bezier(.22,1,.36,1); }
+
+    .num-roll { font-variant-numeric: tabular-nums; }
+    #brainmap { width: 100%; height: 100%; display: block; }
+    .skeleton { background: rgba(18,40,26,0.06); border-radius: 8px; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+    .pill { border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 500; display: inline-block; }
+
+    .btn { border-radius: 999px; padding: 11px 22px; font-size: 13px; font-weight: 500; transition: background .2s, color .2s, opacity .2s; cursor: pointer; border: 0; }
+    .btn-primary { background: #1E4D33; color: #fff; box-shadow: 0 10px 15px rgba(30,77,51,0.25); }
+    .btn-primary:hover { background: #173d29; }
+    .btn-primary:disabled { opacity: .6; cursor: default; }
+    .btn-ghost { border: 1px solid rgba(0,0,0,0.15); background: #fff; color: #12281A; }
+    .btn-ghost:hover { background: #E4EFDA; }
+    .btn-sm { padding: 7px 16px; font-size: 12px; }
+    .aion-select {
+      border: 1px solid rgba(0,0,0,0.15); border-radius: 12px; padding: 11px 14px; background: #fff;
+      font-size: 14px; color: #12281A; font-family: 'Inter', sans-serif;
+    }
+    .tag { border-radius: 999px; padding: 4px 12px; font-size: 12px; background: rgba(18,40,26,0.06); color: #1E4D33; }
+    .stepline { position: relative; padding-left: 26px; }
+    .stepline::before { content: ''; position: absolute; left: 8px; top: 2px; bottom: -2px; width: 1px; background: rgba(18,40,26,0.15); }
+    .stepline:last-child::before { display: none; }
+    .stepdot { position: absolute; left: 3px; top: 2px; width: 11px; height: 11px; border-radius: 999px; background: #42A85D; box-shadow: 0 0 0 3px rgba(66,168,93,0.18); }
+
+    /* Page transitions */
+    @view-transition { navigation: auto; }
+    @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+    body { animation: pageIn .45s ease both; }
+
+    /* Axon chat */
+    .axon-chip { text-align: left; border: 1px solid rgba(0,0,0,0.1); background: #fff; border-radius: 12px; padding: 10px 14px; font-size: 13px; color: #12281A; transition: background .2s, border-color .2s; cursor: pointer; }
+    .axon-chip:hover { background: #E4EFDA; border-color: rgba(66,168,93,0.4); }
+    .msg { max-width: 92%; border-radius: 14px; padding: 12px 16px; font-size: 14px; line-height: 1.55; }
+    .msg-user { background: #1E4D33; color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+    .msg-axon { background: #fff; border: 1px solid rgba(0,0,0,0.06); color: #12281A; border-bottom-left-radius: 4px; }
+    .msg-axon strong { color: #1E4D33; font-weight: 600; }
+    .msg-axon ul { margin: 8px 0 0; padding-left: 18px; list-style: disc; }
+    .msg-axon li { margin: 3px 0; }
+    .msg-axon p { margin: 6px 0 0; } .msg-axon p:first-child { margin-top: 0; }
+    .typing span { display: inline-block; width: 6px; height: 6px; margin: 0 2px; background: #42A85D; border-radius: 50%; animation: blink 1.2s infinite both; }
+    .typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+    #axon-thread::-webkit-scrollbar { width: 6px; } #axon-thread::-webkit-scrollbar-thumb { background: rgba(18,40,26,0.15); border-radius: 999px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+      [data-reveal] { transition: opacity .3s ease !important; transform: none !important; filter: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ============ TOP BAR ============ -->
+  <header class="sticky top-0 z-50 border-b border-black/5 bg-bg/85 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+      <a href="index.html" class="flex items-center gap-2.5">
+        <span class="dotgrid" aria-hidden="true">
+          <span style="background:#42A85D"></span><span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span>
+          <span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span>
+          <span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span><span style="background:#42A85D"></span>
+        </span>
+        <span class="font-geist text-[15px] font-medium tracking-tight text-ink">AION</span>
+        <span class="hidden sm:inline text-ink/30">·</span>
+        <span id="org-name" class="hidden sm:inline text-[13px] text-ink/55">…</span>
+      </a>
+      <!-- Primary navigation is the role-aware tab strip below the header (#tabstrip). -->
+      <span id="tab-hint" class="hidden lg:block text-[13px] text-ink/40" aria-hidden="true"></span>
+      <div class="flex min-w-0 shrink items-center gap-3">
+        <label for="ent-search" class="sr-only">Search everything</label>
+        <div class="relative hidden min-w-0 shrink xl:block">
+          <input id="ent-search" type="search" placeholder="Search…" autocomplete="off"
+            class="w-40 max-w-full rounded-full border border-ink/12 bg-white/70 py-1.5 pl-9 pr-3 text-[13px] text-ink
+                   placeholder:text-ink/35 transition-colors duration-200
+                   focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink/35"
+               viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+            <circle cx="9" cy="9" r="6" /><path d="m14 14 3.5 3.5" stroke-linecap="round" />
+          </svg>
+          <div id="ent-search-results" hidden
+            class="absolute right-0 z-50 mt-2 max-h-96 w-96 overflow-y-auto rounded-xl border border-ink/10
+                   bg-cream p-2 shadow-[0_18px_40px_-16px_rgba(20,42,30,0.35)]"></div>
+        </div>
+        <div class="relative">
+          <button id="notif-btn" type="button" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"
+            class="relative rounded-full p-2 text-ink/55 transition-colors duration-200 hover:text-ink
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40">
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+              <path d="M10 3a4.5 4.5 0 0 0-4.5 4.5c0 3.2-1 4.3-1.4 4.7a.5.5 0 0 0 .35.86h11.1a.5.5 0 0 0 .35-.86c-.4-.4-1.4-1.5-1.4-4.7A4.5 4.5 0 0 0 10 3Z" stroke-linejoin="round"/>
+              <path d="M8.3 16.2a2 2 0 0 0 3.4 0" stroke-linecap="round"/>
+            </svg>
+            <span id="notif-dot" hidden
+              class="absolute right-1 top-1 min-w-[16px] rounded-full bg-[#C0492B] px-1 text-[10px]
+                     font-medium leading-4 text-white">0</span>
+          </button>
+          <div id="notif-panel" hidden role="menu" aria-label="Notifications"
+            class="absolute right-0 top-11 z-50 w-80 max-w-[85vw] overflow-hidden rounded-xl border border-ink/10
+                   bg-cream shadow-[0_18px_40px_-16px_rgba(20,42,30,0.35)]">
+            <div class="flex items-center justify-between border-b border-ink/8 px-4 py-3">
+              <span class="text-[13px] font-medium text-ink">Notifications</span>
+              <button id="notif-readall" class="text-[12px] text-forest/80 hover:text-forest transition-colors">Mark all read</button>
+            </div>
+            <div id="notif-list" class="max-h-96 overflow-y-auto p-2"></div>
+          </div>
+        </div>
+        <div class="hidden min-w-0 lg:flex flex-col items-end leading-tight">
+          <span id="user-email" class="max-w-[180px] truncate text-[13px] font-medium text-ink">–</span>
+          <span id="user-role" class="text-[11px] text-ink/50">–</span>
+        </div>
+        <button id="logout" class="btn btn-ghost btn-sm shrink-0">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ ROLE-AWARE TAB STRIP ============ -->
+  <div id="tabstrip" class="sticky top-[57px] z-40 border-b border-black/5 bg-bg/85 backdrop-blur-md">
+    <div class="mx-auto max-w-7xl px-6">
+      <div id="tabstrip-inner" role="tablist" aria-label="Dashboard areas"
+           class="flex items-center gap-1 overflow-x-auto py-2"></div>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-7xl px-6 py-10">
+
+    <div data-reveal class="mb-10">
+      <p class="label text-forest/70 mb-4">Company health check · <span id="briefing-date">live</span></p>
+      <h1 class="font-geist text-4xl md:text-5xl font-light tracking-[-0.05em] text-ink leading-[0.98]">
+        Your organization's <em class="font-serifx not-italic text-forest">intelligence</em>, in real time.
+      </h1>
+      <p id="top-priority" class="mt-4 max-w-2xl text-[15px] text-ink/65">Reading the nervous system…</p>
+    </div>
+
+    <!-- ===== MY DEPARTMENT — who is in it, who does what, its policies (notes ii–iii) ===== -->
+    <section id="dept-detail" data-reveal class="card p-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="label text-forest/70 mb-2">Your department</p>
+          <h2 id="dept-detail-name" class="font-geist text-2xl font-light tracking-tight text-ink">Your team.</h2>
+          <p id="dept-detail-sub" class="mt-1 text-[13px] text-ink/55"></p>
+        </div>
+        <div id="dept-detail-kpis" class="flex gap-6"></div>
+      </div>
+      <div class="grid gap-8 lg:grid-cols-3">
+        <div class="min-w-0 lg:col-span-1">
+          <p class="label text-forest/70 mb-3">Who is here</p>
+          <div id="dept-detail-people" class="space-y-2"><div class="skeleton h-8"></div><div class="skeleton h-8"></div></div>
+        </div>
+        <div class="min-w-0 lg:col-span-1">
+          <p class="label text-forest/70 mb-3">Who is doing what</p>
+          <div id="dept-detail-projects" class="space-y-2"><div class="skeleton h-8"></div></div>
+        </div>
+        <div class="min-w-0 lg:col-span-1">
+          <p class="label text-forest/70 mb-3">Current policies</p>
+          <div id="dept-detail-policies" class="space-y-2"><div class="skeleton h-8"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MODULE 9 · INTELLIGENCE INDEX ===== -->
+    <section id="intelligence" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div data-reveal class="card p-8 lg:col-span-1 flex flex-col justify-between">
+        <div class="flex items-start justify-between">
+          <p class="label text-ink/45">Overall health score</p>
+          <span id="oii-trend" class="pill" style="background:rgba(18,40,26,0.06);color:#12281A">–</span>
+        </div>
+        <div class="mt-6">
+          <div class="flex items-end gap-2">
+            <span id="oii-score" class="num-roll font-geist text-7xl font-light tracking-tighter text-forest leading-none">–</span>
+            <span class="font-geist text-2xl text-ink/40 mb-1">%</span>
+          </div>
+          <p id="oii-interpretation" class="mt-3 text-sm text-ink/60">Overall organizational health</p>
+        </div>
+        <div class="mt-6 meter"><i id="oii-meter"></i></div>
+      </div>
+      <div data-reveal class="card p-8 lg:col-span-2">
+        <p class="label text-ink/45 mb-6">Three things worth watching</p>
+        <div id="prop-metrics" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div class="skeleton h-16"></div><div class="skeleton h-16"></div><div class="skeleton h-16"></div>
+        </div>
+      </div>
+    </section>
+
+    <section data-reveal class="card mt-6 p-8">
+      <div class="mb-6 flex items-center justify-between">
+        <p class="label text-ink/45">What makes up the score</p><span class="text-xs text-ink/40">12 things we measure</span>
+      </div>
+      <div id="dimensions" class="grid grid-cols-1 gap-x-10 gap-y-5 md:grid-cols-2">
+        <div class="skeleton h-6"></div><div class="skeleton h-6"></div><div class="skeleton h-6"></div><div class="skeleton h-6"></div>
+      </div>
+    </section>
+
+    <!-- ===== AXON · CONVERSATIONAL AI ADVISOR ===== -->
+    <section id="axon" data-reveal class="mt-6 overflow-hidden rounded-2xl border border-forest/15" style="background:linear-gradient(180deg,#ffffff,#F3F8EF)">
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr]">
+        <div class="p-8 border-b lg:border-b-0 lg:border-r border-black/5">
+          <div class="mb-4 flex items-center gap-2.5">
+            <span class="dotgrid" aria-hidden="true">
+              <span style="background:#42A85D"></span><span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span>
+              <span style="background:#12281A"></span><span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span>
+              <span style="background:rgba(18,40,26,0.32)"></span><span style="background:#12281A"></span><span style="background:#42A85D"></span>
+            </span>
+            <p class="label text-forest/70">Ask Axon</p>
+          </div>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Your organization's <em class="font-serifx not-italic text-forest">analyst</em>, on call.</h2>
+          <p class="mt-3 text-sm text-ink/60">Axon answers using your real, live company data — never a generic reply.</p>
+          <div id="axon-suggestions" class="mt-6 flex flex-col gap-2">
+            <button type="button" class="axon-chip" data-q="What is our single biggest organizational risk right now, and what should we do this week?">What's our single biggest risk?</button>
+            <button type="button" class="axon-chip" data-q="Who is most critical to retain — who would hurt us most if they left?">Who's most critical to retain?</button>
+            <button type="button" class="axon-chip" data-q="How healthy is our organization overall, and what's dragging the score down?">How healthy are we overall?</button>
+          </div>
+        </div>
+        <div class="flex flex-col p-8">
+          <div id="axon-thread" class="flex-1 min-h-[280px] max-h-[440px] overflow-y-auto space-y-4 pr-2"></div>
+          <form id="axon-form" class="mt-5 flex items-center gap-3">
+            <input id="axon-input" autocomplete="off" class="aion-select flex-1" placeholder="Ask Axon about your organization…" />
+            <button type="submit" id="axon-send" class="btn btn-primary">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTELLIGENCE TRAJECTORY (history + forecast) ===== -->
+    <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div data-reveal class="card p-8 lg:col-span-1">
+        <p class="label text-ink/45 mb-6">Score over time</p>
+        <div class="h-28 w-full overflow-hidden"><canvas id="history-spark" class="block max-w-full"></canvas></div>
+        <p id="history-note" class="mt-4 text-xs text-ink/50">–</p>
+      </div>
+      <div data-reveal class="card p-8 lg:col-span-2">
+        <p class="label text-ink/45 mb-6">What happens if nothing changes</p>
+        <div id="forecast" class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div class="skeleton h-28"></div><div class="skeleton h-28"></div><div class="skeleton h-28"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MODULE 5 · DISEASE DETECTION ===== -->
+    <section id="diseases" class="mt-6">
+      <div data-reveal class="mb-5 flex items-end justify-between">
+        <div>
+          <p class="label text-forest/70 mb-2">Warning signs</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Five ways a company quietly loses what it knows.</h2>
+        </div>
+        <div class="text-right">
+          <span id="disease-health" class="num-roll font-geist text-4xl font-light text-forest">–</span>
+          <p class="text-xs text-ink/45">out of 100</p>
+        </div>
+      </div>
+      <div id="diseases-grid" class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div class="card p-6"><div class="skeleton h-24"></div></div>
+        <div class="card p-6"><div class="skeleton h-24"></div></div>
+        <div class="card p-6"><div class="skeleton h-24"></div></div>
+      </div>
+    </section>
+
+    <!-- ===== MODULE 2 · BRAIN MAP ===== -->
+    <section data-reveal class="mt-6 overflow-hidden rounded-2xl" style="background:#1E4D33">
+      <div class="flex flex-wrap items-end justify-between gap-4 px-8 pt-8">
+        <div>
+          <p class="label text-emerald mb-2">Who knows what</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-white">The people your knowledge <em class="font-serifx not-italic text-emerald">depends on</em>.</h2>
+          <p class="mt-2 max-w-xl text-sm text-white/55">People on the left. What they know on the right. Follow a line to see who holds what, and watch for anything held by just one person.</p>
+        </div>
+        <div id="brain-summary" class="flex gap-6 text-white/80"></div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3 px-8 text-xs text-white/75">
+        <span class="flex items-center gap-2"><i class="inline-block h-2.5 w-2.5 rounded-full" style="background:#6FD79A"></i>Several people know it (safe)</span>
+        <span class="flex items-center gap-2"><i class="inline-block h-2.5 w-2.5 rounded-full" style="background:#F0917A"></i>Only one person knows it (at risk)</span>
+        <span class="ml-auto text-white/40">Hover any name to trace its lines</span>
+      </div>
+
+      <div class="relative mx-8 mt-5 overflow-hidden rounded-2xl border border-white/10"
+           style="background:radial-gradient(120% 90% at 50% 30%, #17351F 0%, #142E1F 55%, #10261A 100%);">
+        <div id="knowmap-wrap" class="overflow-y-auto" style="max-height:620px;">
+          <svg id="knowmap" class="block w-full"></svg>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-6 px-8 pb-8 pt-3 text-xs text-white/45">
+        <span id="brain-note" class="ml-auto text-white/35"></span>
+      </div>
+    </section>
+
+    <!-- ===== MODULE 13 · MRI ===== -->
+    <section id="mri" class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div data-reveal class="card p-8">
+        <p class="label text-ink/45 mb-6">Which teams share knowledge</p>
+        <div id="knowledge-flow" class="space-y-3"><div class="skeleton h-8"></div><div class="skeleton h-8"></div></div>
+      </div>
+      <div data-reveal class="card p-8">
+        <p class="label text-ink/45 mb-6">Weak spots we found</p>
+        <div id="mri-structural" class="grid grid-cols-2 gap-5"><div class="skeleton h-16"></div><div class="skeleton h-16"></div></div>
+      </div>
+    </section>
+
+    <!-- ===== DEPARTMENTS + BOTTLENECKS ===== -->
+    <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div data-reveal class="card p-8">
+        <p class="label text-ink/45 mb-6">Departments</p>
+        <div id="departments" class="space-y-4"><div class="skeleton h-10"></div><div class="skeleton h-10"></div></div>
+      </div>
+      <div data-reveal class="card p-8">
+        <div class="mb-6 flex items-center justify-between">
+          <p class="label text-ink/45">Only one person knows these</p>
+          <span class="pill" style="background:rgba(192,73,43,0.10);color:#C0492B" id="bottleneck-count">–</span>
+        </div>
+        <div id="bottlenecks" class="space-y-4"><div class="skeleton h-10"></div><div class="skeleton h-10"></div></div>
+      </div>
+    </section>
+
+    <!-- ===== MODULE 6 · FUTURE SIMULATION ===== -->
+    <section id="simulation" data-reveal class="card mt-6 p-8">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="label text-forest/70 mb-2">What if someone leaves</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">See the damage <em class="font-serifx not-italic text-forest">before</em> it happens.</h2>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <select id="sim-employee" class="aion-select"><option>Loading people…</option></select>
+          <button id="sim-run" class="btn btn-primary">Run departure simulation</button>
+        </div>
+      </div>
+      <div id="sim-result" class="text-sm text-ink/50">Pick a person to see what the company would lose if they left tomorrow.</div>
+      <div id="sim-scenarios" class="mt-6 flex flex-wrap gap-2"></div>
+    </section>
+
+    <!-- ===== MODULE 7 · SELF-HEALING ===== -->
+    <section id="healing" data-reveal class="card mt-6 p-8">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="label text-forest/70 mb-2">Suggested fixes</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Things you can do right now, in priority order.</h2>
+        </div>
+        <button id="healing-generate" class="btn btn-primary">Generate recommendations</button>
+      </div>
+      <div id="healing-list" class="space-y-4"><p class="text-sm text-ink/50">No recommendations yet — generate a set from the current disease scan.</p></div>
+    </section>
+
+    <!-- ===== MODULE 11 · OCSIE SUCCESSION ===== -->
+    <section id="ocsie" data-reveal class="card mt-6 p-8">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="label text-forest/70 mb-2">If a person left tomorrow</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">What walks out the door with them.</h2>
+        </div>
+        <select id="ocsie-employee" class="aion-select"><option>Loading people…</option></select>
+      </div>
+      <div id="ocsie-result" class="text-sm text-ink/50">Pick someone to see what only they know.</div>
+    </section>
+
+    <!-- ===== MODULE 10 · BOARD ADVISOR ===== -->
+    <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div data-reveal class="card p-8">
+        <p class="label text-ink/45 mb-6">Problems heading our way</p>
+        <div id="risks" class="space-y-4"><div class="skeleton h-14"></div><div class="skeleton h-14"></div></div>
+      </div>
+      <div data-reveal class="card p-8" style="background:#E4EFDA;border-color:transparent">
+        <p class="label text-forest/70 mb-4">The short version</p>
+        <blockquote class="font-geist text-2xl font-light leading-[1.2] tracking-[-0.02em] text-forest">
+          <span id="briefing-summary">Compiling the executive briefing…</span>
+        </blockquote>
+        <div id="briefing-meta" class="mt-6 text-sm text-ink/60"></div>
+        <div class="mt-6 border-t border-forest/15 pt-5">
+          <p class="label text-forest/60 mb-3">Opportunities</p>
+          <div id="opportunities" class="text-sm text-ink/60">–</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INGESTION ===== -->
+    <!-- Leadership view (SRS Section 27) — only rendered for roles that may see it -->
+    <section id="command-center" data-reveal class="card mt-6 p-8" hidden>
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Leadership view</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">The whole company, at a glance.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Every number here is added up from the departments below — nothing separate is being measured.
+        </p>
+      </div>
+      <div id="cc-kpis" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+      <div class="mt-8">
+        <p class="label text-forest/70 mb-3">Questions this answers</p>
+        <div id="cc-answers" class="grid gap-3 sm:grid-cols-2"></div>
+      </div>
+    </section>
+
+    <!-- Where you sit in the company. Visible to every role: a team cannot tell
+         whether it is the problem without knowing how the rest of the company is doing. -->
+    <section id="org-overview" data-reveal class="card mt-6 p-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="label text-forest/70 mb-2">The company</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Where you sit.</h2>
+        </div>
+        <p id="org-scope-note" class="text-[12px] text-ink/45"></p>
+      </div>
+      <div id="org-kpis" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+      <div id="org-mine" class="mt-5"></div>
+      <div class="mt-6 border-t border-ink/8 pt-5">
+        <p class="label text-forest/70 mb-3">Every team, ranked</p>
+        <div id="org-ladder" class="flex flex-wrap gap-2"></div>
+      </div>
+    </section>
+
+    <!-- Your own record. Every role has one. -->
+    <section id="my-profile" data-reveal class="card mt-6 p-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="label text-forest/70 mb-2">You</p>
+          <h2 id="profile-name" class="font-geist text-2xl font-light tracking-tight text-ink">—</h2>
+          <p id="profile-sub" class="mt-1 text-[14px] text-ink/55"></p>
+        </div>
+        <p id="profile-code" class="label text-ink/40"></p>
+      </div>
+      <div id="profile-grid" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+      <div class="mt-6 grid gap-6 md:grid-cols-2">
+        <div>
+          <p class="label text-forest/70 mb-3">Working on now</p>
+          <div id="profile-current" class="space-y-1.5"></div>
+        </div>
+        <div>
+          <p class="label text-forest/70 mb-3">Recently completed</p>
+          <div id="profile-done" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Leave: balance out of 30, and asking the head. -->
+    <section id="my-leave" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Leave</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Your days off.</h2>
+        <p id="leave-approver" class="mt-2 text-[14px] text-ink/55"></p>
+      </div>
+      <div id="leave-kpis" class="grid gap-3 sm:grid-cols-3"></div>
+
+      <div class="mt-6 rounded-xl border border-ink/10 bg-white/45 p-5">
+        <p class="label text-forest/70 mb-3">Ask for leave</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label for="leave-from" class="block text-[12px] text-ink/55 mb-1">From</label>
+            <input id="leave-from" type="date"
+              class="rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <div>
+            <label for="leave-to" class="block text-[12px] text-ink/55 mb-1">To</label>
+            <input id="leave-to" type="date"
+              class="rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <div class="min-w-[200px] flex-1">
+            <label for="leave-reason" class="block text-[12px] text-ink/55 mb-1">Reason</label>
+            <input id="leave-reason" type="text" placeholder="Optional"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <input id="leave-file" type="file" class="hidden" />
+          <button id="leave-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="leave-send" class="btn btn-primary btn-sm shrink-0">Send to my head</button>
+        </div>
+        <p id="leave-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="leave-msg" class="mt-1 text-[12px] text-ink/50"></p>
+      </div>
+
+      <div class="mt-6">
+        <p class="label text-forest/70 mb-3">Your requests</p>
+        <div id="leave-history" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- Sending a project or policy up for approval. -->
+    <section id="my-requests" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Send to your head</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">A project, or a new policy.</h2>
+      </div>
+      <div class="rounded-xl border border-ink/10 bg-white/45 p-5">
+        <div class="flex flex-wrap items-end gap-3">
+          <div>
+            <label for="req-type" class="block text-[12px] text-ink/55 mb-1">Type</label>
+            <select id="req-type"
+              class="rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25">
+              <option value="project">Project</option>
+              <option value="policy">Policy</option>
+            </select>
+          </div>
+          <div class="min-w-[240px] flex-1">
+            <label for="req-title" class="block text-[12px] text-ink/55 mb-1">Title</label>
+            <input id="req-title" type="text" placeholder="What are you sending up?"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <input id="req-file" type="file" class="hidden" />
+          <button id="req-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="req-send" class="btn btn-primary btn-sm shrink-0">Send</button>
+        </div>
+        <p id="req-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="req-msg" class="mt-1 text-[12px] text-ink/50"></p>
+      </div>
+      <div class="mt-6">
+        <p class="label text-forest/70 mb-3">What you have sent</p>
+        <div id="req-history" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- Head only: what is waiting on a decision. -->
+    <section id="head-queue" data-reveal class="card mt-6 p-8" hidden>
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Waiting on you</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Decisions your team needs.</h2>
+      </div>
+      <div class="grid gap-6 md:grid-cols-2">
+        <div>
+          <p class="label text-forest/70 mb-3">Leave</p>
+          <div id="queue-leave" class="space-y-2"></div>
+        </div>
+        <div>
+          <p class="label text-forest/70 mb-3">Projects and policies</p>
+          <div id="queue-requests" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="mt-8 border-t border-ink/8 pt-6">
+        <p class="label text-forest/70 mb-3">Message your department</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="min-w-[220px] flex-1">
+            <label for="msg-body" class="block text-[12px] text-ink/55 mb-1">Message</label>
+            <input id="msg-body" type="text" placeholder="Goes to everyone in your department"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <input id="msg-file" type="file" class="hidden" />
+          <button id="msg-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="msg-send" class="btn btn-ghost btn-sm shrink-0">Send to all</button>
+        </div>
+        <p id="msg-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="msg-status" class="mt-1 text-[12px] text-ink/50"></p>
+      </div>
+
+      <!-- Cross-department: when one department needs another, message it or ask for approval. -->
+      <div id="cross-dept" class="mt-8 border-t border-ink/8 pt-6" hidden>
+        <p class="label text-forest/70 mb-3">Reach another department</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="min-w-[170px]">
+            <label for="cd-head" class="block text-[12px] text-ink/55 mb-1">Department head</label>
+            <select id="cd-head"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25"></select>
+          </div>
+          <div class="min-w-[200px] flex-1">
+            <label for="cd-body" class="block text-[12px] text-ink/55 mb-1">What you need</label>
+            <input id="cd-body" type="text" placeholder="e.g. Share the Q3 figures for the budget review"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <input id="cd-file" type="file" class="hidden" />
+          <button id="cd-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="cd-send" class="btn btn-primary btn-sm shrink-0">Send message</button>
+          <button id="cd-request" class="btn btn-ghost btn-sm shrink-0">Request approval</button>
+        </div>
+        <p id="cd-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="cd-status" class="mt-2 text-[12px] text-ink/50"><b>Send message</b> reaches that head's inbox as a note. <b>Request approval</b> instead goes to their approvals queue for a yes/no. You can attach a file to either.</p>
+      </div>
+    </section>
+
+    <!-- Fund chain: department -> Finance -> Admin -> intimation. -->
+    <section id="funds" data-reveal class="card mt-6 p-8" hidden>
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Funding</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Money being asked for.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          A department asks, Finance checks the budget, the administrator signs it off, and the
+          department is told the outcome.
+        </p>
+      </div>
+      <div id="fund-list" class="space-y-3"></div>
+      <div id="fund-raise" class="mt-6 border-t border-ink/8 pt-5" hidden>
+        <p class="label text-forest/70 mb-3">Raise a request</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="min-w-[200px] flex-1">
+            <label for="fund-title" class="block text-[12px] text-ink/55 mb-1">What for</label>
+            <input id="fund-title" type="text" placeholder="e.g. Second calibration rig"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <div>
+            <label for="fund-amount" class="block text-[12px] text-ink/55 mb-1">Amount</label>
+            <input id="fund-amount" type="number" min="1" placeholder="185000"
+              class="w-40 rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <button id="fund-send" class="btn btn-primary btn-sm shrink-0">Send to Finance</button>
+        </div>
+        <p id="fund-msg" class="mt-2 text-[12px] text-ink/50"></p>
+      </div>
+    </section>
+
+    <!-- Finance only: salary, funding, profit. -->
+    <section id="finance" data-reveal class="card mt-6 p-8" hidden>
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Finance</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Payroll, funding and profit.</h2>
+      </div>
+      <div id="finance-kpis" class="grid gap-3 sm:grid-cols-3"></div>
+      <div class="mt-6 grid gap-6 md:grid-cols-2">
+        <div>
+          <p class="label text-forest/70 mb-3">Payroll by department</p>
+          <div id="finance-payroll" class="space-y-2"></div>
+        </div>
+        <div>
+          <p class="label text-forest/70 mb-3">Funding and profit</p>
+          <div id="finance-lines" class="space-y-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- One AI agent per department, plus the organisation agent. -->
+    <section id="dept-agents" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Your department's agent</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Ask about your own team.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Each department has its own agent that knows only that department. The administrator
+          also has one that sees the whole company.
+        </p>
+      </div>
+      <div id="agent-picker" class="mb-4 flex flex-wrap gap-2"></div>
+      <div id="agent-thread" class="mb-4 max-h-80 space-y-3 overflow-y-auto rounded-xl border border-ink/10 bg-white/45 p-4"></div>
+      <div class="flex flex-wrap items-center gap-3">
+        <label for="agent-input" class="sr-only">Message the agent</label>
+        <input id="agent-input" type="text" placeholder="Ask your department's agent…"
+          class="min-w-0 flex-1 rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                 transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+        <button id="agent-send" class="btn btn-primary btn-sm shrink-0">Ask</button>
+      </div>
+    </section>
+
+    <!-- People a head or manager is responsible for. Hidden for employees. -->
+    <section id="my-team" data-reveal class="card mt-6 p-8" hidden>
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Your people</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Who is writing things down.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Knowledge that only lives in one person's head is the risk this page exists to surface.
+        </p>
+      </div>
+      <div id="team-list" class="space-y-2"></div>
+      <p id="team-silent" class="mt-4 text-[13px] text-ink/50"></p>
+    </section>
+
+    <!-- Department scorecards (SRS Section 37).
+         Anchor is "scorecards", not "departments": an older list higher up already
+         owns that id, and a duplicate would make the nav link jump to the wrong one. -->
+    <section id="scorecards" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Departments</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">How each team is doing.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Health is how fresh and reviewed a team's knowledge is. Risk rises when knowledge sits with
+          one person, goes stale, or waits too long for approval.
+        </p>
+      </div>
+      <div id="dept-cards" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <p class="text-sm text-ink/40">Loading…</p>
+      </div>
+      <!-- Admin drill-down: click a department to see its people and their work. -->
+      <div id="dept-drill" hidden class="mt-6 rounded-xl border border-forest/20 bg-white/55 p-6">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h3 id="drill-name" class="font-geist text-lg font-medium text-ink"></h3>
+          <button id="drill-close" class="btn btn-ghost btn-sm">Close</button>
+        </div>
+        <p id="drill-sub" class="mb-4 text-[13px] text-ink/55"></p>
+        <div class="grid gap-6 md:grid-cols-3">
+          <div class="min-w-0"><p class="label text-forest/70 mb-2">People</p><div id="drill-people" class="space-y-2"></div></div>
+          <div class="min-w-0"><p class="label text-forest/70 mb-2">Who is doing what</p><div id="drill-projects" class="space-y-2"></div></div>
+          <div class="min-w-0"><p class="label text-forest/70 mb-2">Policies</p><div id="drill-policies" class="space-y-2"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Risk prediction (SRS Section 32) -->
+    <section id="risks-ahead" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">What could go wrong</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Problems before they land.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Each one says how likely it is, why we think so, and what to do about it.
+        </p>
+      </div>
+      <div id="risk-list" class="space-y-3"><p class="text-sm text-ink/40">Loading…</p></div>
+    </section>
+
+    <!-- Approval queue (SRS Sections 12-13) -->
+    <section id="approvals" data-reveal class="card mt-6 p-8">
+      <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="label text-forest/70 mb-2">Approvals</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Waiting on a decision.</h2>
+          <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+            New documents go to a manager first, then to the department head, before they count as
+            company knowledge.
+          </p>
+        </div>
+        <div id="wf-stats" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div id="approval-queue"><p class="text-sm text-ink/40">Loading…</p></div>
+    </section>
+
+    <!-- Knowledge marketplace (SRS Section 30) -->
+    <section id="shared" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Shared knowledge</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Work worth borrowing.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Teams keep their own files private. Anything published here is deliberately offered to the
+          rest of the company.
+        </p>
+      </div>
+      <div id="market-list" class="grid gap-4 md:grid-cols-2"><p class="text-sm text-ink/40">Loading…</p></div>
+
+      <!-- Publish an approved document so other teams can use it (SRS 30.1) -->
+      <div id="publish-box" class="mt-6 border-t border-ink/8 pt-6" hidden>
+        <p class="label text-forest/70 mb-3">Share something with the company</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="publish-pick" class="sr-only">Choose an approved document to share</label>
+          <select id="publish-pick"
+            class="min-w-0 flex-1 rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                   transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25">
+            <option value="">Choose an approved document…</option>
+          </select>
+          <button id="publish-go" class="btn btn-primary btn-sm shrink-0" disabled>Share it</button>
+        </div>
+        <p id="publish-note" class="mt-2 text-[12px] text-ink/45">Only documents that have been approved can be shared.</p>
+      </div>
+
+      <!-- Who shares and who borrows (SRS 30.2) -->
+      <div class="mt-8 border-t border-ink/8 pt-6">
+        <p class="label text-forest/70 mb-3">Who shares, who borrows</p>
+        <div id="market-metrics" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+      </div>
+    </section>
+
+    <!-- Learning Center (SRS Section 34) -->
+    <section id="learning" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Learn</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Where the gaps are, and what to read.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          When a subject is barely written down, this points at the few documents that do cover it,
+          instead of only naming the gap.
+        </p>
+      </div>
+      <div id="learning-gaps" class="grid gap-4 md:grid-cols-3"><p class="text-sm text-ink/40">Loading…</p></div>
+      <div class="mt-8 border-t border-ink/8 pt-6">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <p class="label text-forest/70">My learning</p>
+          <p id="learning-effect" class="text-[12px] text-ink/45"></p>
+        </div>
+        <div id="learning-records" class="mt-3"></div>
+      </div>
+    </section>
+
+    <!-- Organizational memory timeline (SRS Section 31) -->
+    <section id="memory" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Company memory</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">What happened, and when.</h2>
+      </div>
+      <div id="timeline-list"><p class="text-sm text-ink/40">Loading…</p></div>
+    </section>
+
+    <section id="ingestion" data-reveal class="card mt-6 p-8">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="label text-forest/70 mb-2">Add a document</p>
+          <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Feed the nervous system.</h2>
+        </div>
+        <div class="flex items-center gap-3">
+          <input id="ingest-file" type="file" class="hidden" accept=".pdf,.docx,.txt,.md,.xlsx,.csv" />
+          <button id="ingest-pick" class="btn btn-ghost">Choose a document</button>
+          <button id="ingest-upload" class="btn btn-primary" disabled>Upload &amp; ingest</button>
+        </div>
+      </div>
+      <p id="ingest-status" class="mb-5 text-sm text-ink/55">Add a PDF, Word, Excel or text file. AION reads it, works out what it is about, and updates the score.</p>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="label text-ink/45">Recently added · <span id="recent-scope-label" class="text-forest/70"></span></p>
+        <button id="recent-scope-toggle" class="btn btn-ghost btn-sm">Show department</button>
+      </div>
+      <div id="recent-uploads" class="space-y-3"><div class="skeleton h-10"></div><div class="skeleton h-10"></div></div>
+    </section>
+
+    <!-- ===== MODULE 4 · DECAY / ENTROPY ===== -->
+    <section data-reveal class="card mt-6 p-8">
+      <div class="mb-5">
+        <p class="label text-forest/70 mb-2">Knowledge map</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">What our knowledge is about.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Every document AION holds, grouped by topic. Taller bars are the subjects written about most.
+          A healthy company spreads knowledge across many topics instead of piling it into one, and keeps
+          each topic known by more than a single person.
+        </p>
+      </div>
+      <div id="knowledge-summary" class="mb-7 flex flex-wrap gap-3"></div>
+      <p class="label text-ink/45 mb-3">Documents by topic</p>
+      <div id="domains" class="grid gap-x-5 gap-y-6" style="grid-template-columns:repeat(auto-fit,minmax(96px,1fr))"></div>
+      <div class="mt-9 border-t border-black/5 pt-7">
+        <p class="label text-forest/70 mb-1">Where this knowledge is at risk</p>
+        <p class="mb-4 max-w-2xl text-[13px] text-ink/50">The three ways knowledge quietly becomes a liability. Worth a look before it bites.</p>
+        <div id="decay-detail" class="grid grid-cols-1 gap-4 sm:grid-cols-3"></div>
+      </div>
+    </section>
+
+    <!-- Messages inbox — what other people (any department, or the admin) sent you. -->
+    <section id="messages-inbox" data-reveal class="card mt-6 p-8">
+      <div class="mb-6">
+        <p class="label text-forest/70 mb-2">Messages</p>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">What people sent you.</h2>
+        <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
+          Messages and files sent to you or your department. Files open with a click.
+        </p>
+      </div>
+      <!-- Employees can write back to their head — messaging is two-way. -->
+      <div id="msg-reply" hidden class="mb-6 rounded-xl border border-ink/10 bg-white/45 p-4">
+        <p id="reply-label" class="label text-forest/70 mb-2">Message your head</p>
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="min-w-[220px] flex-1">
+            <input id="reply-body" type="text" placeholder="Write to your department head"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
+          </div>
+          <input id="reply-file" type="file" class="hidden" />
+          <button id="reply-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="reply-send" class="btn btn-primary btn-sm shrink-0">Send</button>
+        </div>
+        <p id="reply-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="reply-status" class="mt-1 text-[12px] text-ink/50"></p>
+      </div>
+      <div id="messages-list" class="space-y-3"><div class="skeleton h-12"></div><div class="skeleton h-12"></div></div>
+    </section>
+
+    <footer class="mt-16 flex flex-col items-center gap-2 border-t border-black/10 pt-8 pb-4 text-center">
+      <p class="text-sm text-ink/50">AION · Artificial Intelligence Organizational Nervous System</p>
+      <p class="text-xs text-ink/35">Not a chatbot. Not a RAG tool. Your organization's digital brain.</p>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+      if (!window.AION || !AION.requireAuth()) return;
+
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var HEALTH = { green: '#42A85D', yellow: '#E4C35A', red: '#E0795C' };
+      var SEV = {
+        critical: { bg: 'rgba(192,73,43,0.10)', fg: '#C0492B' },
+        warning:  { bg: 'rgba(199,154,46,0.12)', fg: '#9A7415' },
+        high:     { bg: 'rgba(199,154,46,0.12)', fg: '#9A7415' },
+        medium:   { bg: 'rgba(199,154,46,0.12)', fg: '#9A7415' },
+        healthy:  { bg: 'rgba(66,168,93,0.12)',  fg: '#1E4D33' },
+        low:      { bg: 'rgba(66,168,93,0.12)',  fg: '#1E4D33' }
+      };
+      function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+      function titleCase(s){ return String(s||'').replace(/[_-]/g,' ').replace(/\b\w/g, function(m){return m.toUpperCase();}); }
+
+      /* Plain-English names for the system's internal terms — anyone should be able to
+         read this dashboard without knowing the jargon. */
+      var PLAIN = {
+        knowledge_velocity: 'How fast new knowledge is added',
+        knowledge_coverage: 'How much is actually written down',
+        knowledge_quality: 'How good the writing is',
+        learning_agility: 'How quickly the team learns',
+        collaboration_density: 'How much people work together',
+        innovation_index: 'How many new ideas are forming',
+        decision_intelligence: 'How well decisions are informed',
+        cognitive_resilience: 'How well we cope if someone leaves',
+        knowledge_accessibility: 'How easy things are to find',
+        expertise_depth: 'How deep the expertise runs',
+        knowledge_retention: 'How much knowledge we keep',
+        adaptability_score: 'How well we adapt to change',
+        communication_stroke: 'Teams have stopped talking to each other',
+        knowledge_obesity: 'Too much old, unused material',
+        knowledge_concentration: 'Too much depends on one person',
+        knowledge_cancer: 'The same thing written many times',
+        memory_alzheimers: 'Knowledge being forgotten',
+        innovation_paralysis: 'New ideas have stalled'
+      };
+      function plain(k){ return PLAIN[k] || titleCase(k); }
+      function pct(x){ return Math.round((x||0) * 100); }
+      function el(id){ return document.getElementById(id); }
+      function fail(id, msg){ var e = el(id); if (e) e.innerHTML = '<p class="text-sm text-ink/40">' + esc(msg || 'Unavailable') + '</p>'; }
+      function postJSON(path, body){ return AION.authFetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if (!r.ok) { throw new Error((j && j.detail) || ('Request failed (' + r.status + ')')); } return j; }); }); }
+
+      /* ---- Identity ---- */
+      var c = AION.claims();
+      if (c.email) el('user-email').textContent = c.email;
+      if (c.role) el('user-role').textContent = titleCase(c.role);
+      el('logout').addEventListener('click', function () { AION.logout(); });
+
+      /* ---- Reveal ---- */
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('[data-reveal]').forEach(function (n) { io.observe(n); });
+
+      function animateNumber(node, target) {
+        if (reduce) { node.textContent = target; return; }
+        node.textContent = '0';
+        var dur = 1100, t0 = performance.now(), done = false;
+        function step(now) { var p = Math.min(1, (now - t0) / dur); var e = 1 - Math.pow(1 - p, 3); node.textContent = Math.round(target * e); if (p < 1) requestAnimationFrame(step); else done = true; }
+        requestAnimationFrame(step);
+        setTimeout(function () { if (!done) node.textContent = target; }, dur + 400);
+      }
+      function metricCard(value, unit, label) {
+        return '<div><div class="flex items-end gap-1"><span class="num-roll font-geist text-3xl font-light text-ink">' +
+          esc(value) + '</span><span class="text-sm text-ink/40 mb-1">' + esc(unit) + '</span></div>' +
+          '<p class="mt-1 text-xs text-ink/55">' + esc(label) + '</p></div>';
+      }
+
+      /* ---- Module 9: Intelligence Index ---- */
+      AION.get('/intelligence/index').then(function (d) {
+        var score = pct(d.overall_health);
+        animateNumber(el('oii-score'), score);
+        el('oii-meter').style.transform = 'scaleX(' + (score / 100) + ')';
+        var dims = d.dimensions || {}, host = el('dimensions'); host.innerHTML = '';
+        Object.keys(dims).forEach(function (k) {
+          var v = pct(dims[k]);
+          var row = document.createElement('div');
+          row.innerHTML =
+            '<div class="mb-1.5 flex items-center justify-between"><span class="text-sm text-ink/70">' + esc(plain(k)) +
+            '</span><span class="text-sm font-medium text-ink num-roll">' + v + '</span></div>' +
+            '<div class="meter"><i style="background:' + (v < 30 ? '#E0795C' : v < 60 ? '#C79A2E' : '#1E4D33') + '"></i></div>';
+          host.appendChild(row);
+          (function (r, val) { setTimeout(function () { r.querySelector('.meter > i').style.transform = 'scaleX(' + (val / 100) + ')'; }, 60); })(row, v);
+        });
+        var p = d.proprietary_metrics || {};
+        el('prop-metrics').innerHTML = [
+          metricCard(Math.round(p.knowledge_half_life_days), 'days', 'How long knowledge stays useful before it goes stale'),
+          metricCard((p.knowledge_entropy_bits || 0).toFixed(1), '', 'How evenly knowledge is spread across the company'),
+          metricCard(pct(p.memory_compression_ratio), '%', 'How well knowledge is kept without repeating itself')
+        ].join('');
+      }).catch(function () { el('oii-score').textContent = 'n/a'; fail('dimensions', 'Unavailable'); fail('prop-metrics', ''); });
+
+      AION.get('/intelligence/trends').then(function (t) {
+        var e = el('oii-trend'), trend = t.trend || 'stable', delta = t.delta_30d || 0;
+        e.textContent = (trend === 'improving' ? '↑ ' : trend === 'declining' ? '↓ ' : '→ ') + titleCase(trend);
+        if (trend === 'improving') { e.style.background = 'rgba(66,168,93,0.14)'; e.style.color = '#1E4D33'; }
+        else if (trend === 'declining') { e.style.background = 'rgba(192,73,43,0.10)'; e.style.color = '#C0492B'; }
+        el('oii-interpretation').textContent = 'Overall company health · ' + (delta >= 0 ? '+' : '') + pct(delta) + ' pts / 30d';
+      }).catch(function(){});
+
+      /* ---- History sparkline + forecast ---- */
+      AION.get('/intelligence/history').then(function (list) {
+        var pts = (list || []).map(function (s) { return pct(s.overall_health); }).reverse();
+        drawSpark('history-spark', pts);
+        el('history-note').textContent = pts.length > 1
+          ? pts.length + ' snapshots · latest ' + pts[pts.length - 1] + '%'
+          : 'Baseline snapshot at ' + (pts[0] || '–') + '%. Trajectory sharpens as weekly snapshots accumulate.';
+      }).catch(function(){ fail('history-note','History unavailable'); });
+
+      AION.get('/mri/timeline-forecast').then(function (f) {
+        var host = el('forecast'); host.innerHTML = '';
+        [['3_month_forecast', '3 months'], ['6_month_forecast', '6 months'], ['12_month_forecast', '12 months']].forEach(function (pair) {
+          var m = f[pair[0]]; if (!m) return;
+          var card = document.createElement('div');
+          card.className = 'rounded-xl border border-black/5 p-5';
+          card.innerHTML =
+            '<p class="label text-ink/40 mb-2">' + pair[1] + '</p>' +
+            '<p class="font-geist text-lg font-light text-danger leading-tight">' + esc(m.projected_health_change) + '</p>' +
+            '<p class="mt-3 text-xs text-ink/50">Confidence ' + pct(m.confidence) + '%</p>';
+          host.appendChild(card);
+        });
+      }).catch(function(){ fail('forecast','Forecast unavailable'); });
+
+      /* ---- Module 5: Diseases ---- */
+      AION.get('/diseases/scan').then(function (d) {
+        el('disease-health').textContent = (d.overall_health_score != null ? d.overall_health_score : '–');
+        var host = el('diseases-grid'); host.innerHTML = '';
+        var diseases = d.diseases || {};
+        Object.keys(diseases).forEach(function (k) {
+          var dz = diseases[k], sev = SEV[dz.severity] || SEV.healthy;
+          var card = document.createElement('div'); card.className = 'card p-6';
+          card.innerHTML =
+            '<div class="flex items-start justify-between gap-3">' +
+              '<h3 class="font-geist text-lg font-medium tracking-tight text-ink">' + esc(dz.title || titleCase(k)) + '</h3>' +
+              '<span class="pill" style="background:' + sev.bg + ';color:' + sev.fg + '">' + esc(titleCase(dz.severity)) + '</span></div>' +
+            '<p class="mt-3 text-sm text-ink/65 leading-relaxed">' + esc(dz.description || '') + '</p>' +
+            (dz.recommended_action ? '<p class="mt-4 text-xs text-forest">↳ ' + esc(titleCase(dz.recommended_action)) + '</p>' : '') +
+            (dz.days_until_critical != null ? '<p class="mt-1 text-xs text-ink/40">' + dz.days_until_critical + ' days until critical</p>' : '');
+          host.appendChild(card);
+        });
+      }).catch(function () { fail('diseases-grid', 'Disease scan unavailable'); });
+
+      /* ---- Module 13: MRI ---- */
+      AION.get('/mri/knowledge-flow').then(function (flows) {
+        var host = el('knowledge-flow'); host.innerHTML = '';
+        (flows || []).slice(0, 8).forEach(function (f) {
+          var col = f.health_status === 'healthy' ? '#42A85D' : f.health_status === 'warning' ? '#C79A2E' : '#E0795C';
+          var row = document.createElement('div');
+          row.className = 'flex items-center justify-between border-b border-black/5 pb-2.5';
+          row.innerHTML =
+            '<span class="text-sm text-ink">' + esc(f.from_department) + ' <span class="text-ink/35">→</span> ' + esc(f.to_department) + '</span>' +
+            '<span class="flex items-center gap-2 text-xs text-ink/55"><i class="inline-block h-2 w-2 rounded-full" style="background:' + col + '"></i>' + f.flow_strength + ' flows · ' + f.unique_contributors + ' people</span>';
+          host.appendChild(row);
+        });
+        if (!(flows || []).length) fail('knowledge-flow', 'No cross-department flow yet');
+      }).catch(function () { fail('knowledge-flow', 'Unavailable'); });
+
+      Promise.all([
+        AION.get('/mri/dependencies').catch(function(){return [];}),
+        AION.get('/mri/black-holes').catch(function(){return [];}),
+        AION.get('/mri/innovation-centers').catch(function(){return [];})
+      ]).then(function (r) {
+        el('mri-structural').innerHTML =
+          statCell(r[0].length, 'Things only one person knows', '#C0492B') +
+          statCell(r[1].length, 'Documents nobody ever opens', '#E0795C') +
+          statCell(r[2].length, 'Places new ideas come from', '#42A85D') +
+          statCell((r[0].length + r[1].length) === 0 ? '✓' : (r[0].length + r[1].length), 'Total weak spots', '#1E4D33');
+      });
+      function statCell(v, label, col) {
+        return '<div><div class="num-roll font-geist text-3xl font-light" style="color:' + col + '">' + v + '</div>' +
+          '<p class="mt-1 text-xs text-ink/55">' + esc(label) + '</p></div>';
+      }
+
+      /* ---- Departments ---- */
+      AION.get('/graph/departments').then(function (d) {
+        var all = d.departments || [];
+        // Org name is the root department (id ends in "-root") — live, not hardcoded.
+        var root = all.filter(function (x) { return /-root$/.test(x.id || ''); })[0];
+        if (root && root.name) el('org-name').textContent = root.name;
+        var list = all.filter(function (x) { return x.headcount > 0 || x.knowledge_items > 0; });
+        var host = el('departments'); host.innerHTML = '';
+        list.forEach(function (dep) {
+          var row = document.createElement('div');
+          row.className = 'flex items-center justify-between border-b border-black/5 pb-3';
+          row.innerHTML = '<span class="text-[15px] text-ink">' + esc(dep.name) + '</span>' +
+            '<span class="text-sm text-ink/55">' + dep.headcount + ' people · ' + dep.knowledge_items + ' knowledge</span>';
+          host.appendChild(row);
+        });
+        if (!list.length) fail('departments', 'No departments yet');
+      }).catch(function () { fail('departments', 'Unavailable'); });
+
+      AION.get('/mri/bottlenecks').then(function (list) {
+        var host = el('bottlenecks'); el('bottleneck-count').textContent = list.length + ' critical'; host.innerHTML = '';
+        list.slice(0, 6).forEach(function (b) {
+          var row = document.createElement('div'); row.className = 'border-b border-black/5 pb-3';
+          row.innerHTML =
+            '<div class="flex items-center justify-between"><span class="text-[15px] text-ink">' + esc(b.title) + '</span>' +
+            '<span class="pill" style="background:rgba(192,73,43,0.10);color:#C0492B">' + esc(b.domain) + '</span></div>' +
+            '<p class="mt-1 text-xs text-ink/50">' + esc(b.recommendation) + '</p>';
+          host.appendChild(row);
+        });
+        if (!list.length) fail('bottlenecks', 'No single-owner risks');
+      }).catch(function () { fail('bottlenecks', 'Unavailable'); });
+
+      /* ---- Module 10: Board ---- */
+      AION.get('/advisor/risks').then(function (d) {
+        var host = el('risks'), list = d.predicted_risks || []; host.innerHTML = '';
+        list.forEach(function (r) {
+          var sev = SEV[r.severity] || SEV.medium;
+          var row = document.createElement('div'); row.className = 'border-b border-black/5 pb-4';
+          row.innerHTML =
+            '<div class="flex items-center justify-between gap-3"><span class="text-[15px] font-medium text-ink">' + esc(plain(r.risk_type)) + '</span>' +
+            '<span class="pill" style="background:' + sev.bg + ';color:' + sev.fg + '">' + esc(titleCase(r.severity)) + '</span></div>' +
+            '<p class="mt-1.5 text-sm text-ink/65">' + esc(r.action) + '</p>' +
+            (r.timeline_days != null ? '<p class="mt-1 text-xs text-ink/40">Horizon · ' + r.timeline_days + ' days</p>' : '');
+          host.appendChild(row);
+        });
+        if (!list.length) fail('risks', 'No risks predicted');
+      }).catch(function () { fail('risks', 'Unavailable'); });
+
+      AION.get('/advisor/briefing/latest').then(function (d) {
+        var ex = d.executive_summary || {};
+        el('briefing-summary').textContent = '“' + (ex.top_priority || 'Operating within expected parameters.') + '”';
+        el('briefing-meta').innerHTML = 'Health ' + esc(ex.organization_health_score || '–') + ' · trend ' + esc(ex.health_trend || '–') + ' · for ' + esc(d.generated_for || 'leadership');
+        if (d.briefing_date) el('briefing-date').textContent = d.briefing_date;
+        if (ex.top_priority) el('top-priority').textContent = ex.top_priority;
+      }).catch(function () { el('briefing-summary').textContent = 'Briefing unavailable.'; });
+
+      AION.get('/advisor/opportunities').then(function (d) {
+        var list = d.opportunities || [];
+        el('opportunities').innerHTML = list.length
+          ? list.map(function (o) { return '<p class="mb-1">↳ ' + esc(o.description || o.title || o) + '</p>'; }).join('')
+          : '<p class="text-ink/50">' + esc(d.note || 'None surfaced from current data.') + '</p>';
+      }).catch(function(){ el('opportunities').textContent = 'Unavailable'; });
+
+      /* ---- Module 4: Entropy + decay detail ---- */
+      function knowledgeChip(value, label, tone) {
+        return '<div class="rounded-xl border border-ink/10 bg-white/50 px-4 py-2.5">' +
+          '<div class="flex items-baseline gap-2"><span class="font-geist text-xl text-ink">' + esc(String(value)) + '</span>' +
+          '<span class="text-[12px] text-ink/55">' + esc(label) + '</span></div>' + (tone || '') + '</div>';
+      }
+      AION.get('/decay/entropy').then(function (d) {
+        var dist = d.domain_distribution || {};
+        var total = d.total_knowledge_items || Object.keys(dist).reduce(function (s, k) { return s + dist[k]; }, 0) || 0;
+        var topics = Object.keys(dist).length;
+        var isolated = d.isolated_items != null ? d.isolated_items : 0;
+
+        // A one-line, plain reading of how healthy the spread is.
+        var health = (d.health_interpretation || '').replace(/[^\x20-\x7E]+/g, '—');
+        var band = /healthy/i.test(health) ? 'healthy' : /concentrat|risk|poor|weak/i.test(health) ? 'critical' : 'attention';
+        el('knowledge-summary').innerHTML =
+          knowledgeChip(total, 'documents in total', '') +
+          knowledgeChip(topics, 'different topics', '') +
+          '<div class="rounded-xl px-4 py-2.5 flex items-center" style="' + bandStyle(band) + '">' +
+            '<span class="text-[12.5px] font-medium">' + esc(health || 'Knowledge spread analysed') + '</span></div>' +
+          (isolated ? knowledgeChip(isolated, 'documents nobody is linked to', '') : '');
+
+        var max = Math.max.apply(null, Object.keys(dist).map(function (k) { return dist[k]; }).concat([1]));
+        var host = el('domains'); host.innerHTML = '';
+        // Largest topics first so the shape reads left-to-right.
+        Object.keys(dist).sort(function (a, b) { return dist[b] - dist[a]; }).forEach(function (k) {
+          var v = dist[k], pct = total ? Math.round(v / total * 100) : 0, col = document.createElement('div');
+          col.title = titleCase(k) + ': ' + v + ' document' + (v === 1 ? '' : 's') + ' (' + pct + '% of all knowledge)';
+          col.innerHTML =
+            '<div class="flex h-24 items-end"><div class="w-full rounded-t-md" style="height:100%;transform:scaleY(0);transform-origin:bottom;background:linear-gradient(180deg,#42A85D,#1E4D33);transition:transform .9s cubic-bezier(.22,1,.36,1)"></div></div>' +
+            '<div class="mt-2"><div class="flex items-baseline justify-between gap-1">' +
+              '<span class="text-[12px] text-ink/70 truncate">' + esc(titleCase(k)) + '</span>' +
+              '<span class="text-[12px] font-semibold text-ink">' + v + '</span></div>' +
+            '<div class="text-[11px] text-ink/40">' + pct + '% of docs</div></div>';
+          host.appendChild(col);
+          (function (cc, h) { setTimeout(function () { cc.querySelector('div>div').style.transform = 'scaleY(' + h + ')'; }, 60); })(col, (v / max));
+        });
+      }).catch(function () { fail('domains', 'Unavailable'); });
+
+      function riskCard(value, color, title, note) {
+        return '<div class="rounded-xl border border-ink/8 bg-white/45 p-5">' +
+          '<div class="font-geist text-3xl font-light" style="color:' + color + '">' + esc(String(value)) + '</div>' +
+          '<div class="mt-1 text-[13px] font-medium text-ink">' + esc(title) + '</div>' +
+          '<div class="mt-0.5 text-[12px] leading-relaxed text-ink/50">' + esc(note) + '</div></div>';
+      }
+      Promise.all([
+        AION.get('/decay/report').catch(function(){return {summary:{}};}),
+        AION.get('/decay/forgotten').catch(function(){return {count:0};}),
+        AION.get('/decay/conflicts').catch(function(){return {conflicts:[]};})
+      ]).then(function (r) {
+        var sum = r[0].summary || {};
+        el('decay-detail').innerHTML =
+          riskCard(sum.single_owner_critical != null ? sum.single_owner_critical : '—', '#C0492B',
+            'Known by only one person', 'If they leave, this knowledge could walk out with them.') +
+          riskCard(r[1].count != null ? r[1].count : '—', '#B07D18',
+            'Untouched for 3+ months', 'Going stale: likely out of date, or simply forgotten.') +
+          riskCard((r[2].conflicts || []).length, '#1E4D33',
+            'Documents that disagree', 'Two records contradict each other; one of them is wrong.');
+      });
+
+      /* ---- People list (shared by Simulation + OCSIE) ---- */
+      var peopleReady = AION.get('/graph/nodes').then(function (d) {
+        return (d.nodes || []).filter(function (n) { return n.type === 'Person'; });
+      }).catch(function(){ return []; });
+
+      peopleReady.then(function (people) {
+        function fill(sel, placeholder) {
+          var s = el(sel); s.innerHTML = '';
+          var o0 = document.createElement('option'); o0.value = ''; o0.textContent = placeholder; s.appendChild(o0);
+          people.forEach(function (p) { var o = document.createElement('option'); o.value = p.id; o.textContent = p.label; s.appendChild(o); });
+        }
+        fill('sim-employee', people.length ? 'Select a person…' : 'No people found');
+        fill('ocsie-employee', people.length ? 'Select an employee…' : 'No people found');
+      });
+
+      /* ---- Module 6: Simulation ---- */
+      AION.get('/simulation/scenarios').then(function (d) {
+        el('sim-scenarios').innerHTML = (d.scenarios || []).map(function (s) {
+          return '<span class="tag" title="' + esc(s.description) + '">' + esc(s.name) + '</span>'; }).join('');
+      }).catch(function(){});
+
+      el('sim-run').addEventListener('click', function () {
+        var pid = el('sim-employee').value;
+        if (!pid) { el('sim-result').innerHTML = '<p class="text-sm text-danger">Select a person first.</p>'; return; }
+        var btn = this; btn.disabled = true; var lbl = btn.textContent; btn.textContent = 'Simulating…';
+        el('sim-result').innerHTML = '<div class="skeleton h-24"></div>';
+        postJSON('/simulation/run', { scenario_type: 'employee_departure', parameters: { employee_ids: [pid] } })
+          .then(function (r) {
+            var res = r.results || {}, chain = r.cascade_chain || [];
+            var steps = chain.map(function (s) {
+              var detail = s.event; var extras = [];
+              ['direct_impact','knowledge_items_at_risk','knowledge_loss_percentage','projects_delayed','recovery_time_days'].forEach(function(k){
+                if (s[k] != null) extras.push(titleCase(k) + ': ' + s[k]); });
+              return '<div class="stepline pb-4"><span class="stepdot"></span><p class="text-sm text-ink font-medium">' + esc(detail) + '</p>' +
+                (extras.length ? '<p class="text-xs text-ink/50 mt-0.5">' + esc(extras.join(' · ')) + '</p>' : '') + '</div>';
+            }).join('');
+            el('sim-result').innerHTML =
+              '<div class="rounded-xl p-5 mb-6" style="background:#E4EFDA"><p class="text-sm text-forest">' + esc(res.business_impact_summary || 'Simulation complete.') + '</p></div>' +
+              '<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">' +
+                statCell(pct(res.knowledge_loss_percentage/100 || 0) + '%', 'Knowledge lost', '#C0492B') +
+                statCell((res.affected_projects||[]).length, 'Projects hit', '#C79A2E') +
+                statCell('$' + (res.revenue_risk_usd || 0), 'Revenue risk', '#12281A') +
+                statCell(res.recovery_time_days + 'd', 'Recovery time', '#1E4D33') +
+              '</div><div>' + steps + '</div>';
+            btn.disabled = false; btn.textContent = lbl;
+          }).catch(function () { el('sim-result').innerHTML = '<p class="text-sm text-danger">Simulation failed.</p>'; btn.disabled = false; btn.textContent = lbl; });
+      });
+
+      /* ---- Module 7: Self-Healing ---- */
+      function renderHealing(list) {
+        var host = el('healing-list');
+        if (!list.length) { host.innerHTML = '<p class="text-sm text-ink/50">Nothing to fix right now. Press the button to check again.</p>'; return; }
+        host.innerHTML = '';
+        list.forEach(function (r) {
+          var sev = SEV[r.priority] || SEV.medium;
+          var actions = '';
+          if (r.status === 'pending') actions = '<button class="btn btn-primary btn-sm" data-act="approve" data-id="' + r.id + '">Approve</button> <button class="btn btn-ghost btn-sm" data-act="reject" data-id="' + r.id + '">Dismiss</button>';
+          else if (r.status === 'approved') actions = '<button class="btn btn-primary btn-sm" data-act="complete" data-id="' + r.id + '">Mark complete</button>';
+          else actions = '<span class="pill" style="background:rgba(66,168,93,0.12);color:#1E4D33">' + esc(titleCase(r.status)) + '</span>';
+          var row = document.createElement('div'); row.className = 'border-b border-black/5 pb-4';
+          row.innerHTML =
+            '<div class="flex items-start justify-between gap-3"><h3 class="font-geist text-base font-medium text-ink">' + esc(r.title) + '</h3>' +
+            '<span class="pill" style="background:' + sev.bg + ';color:' + sev.fg + '">' + esc(titleCase(r.priority)) + '</span></div>' +
+            '<p class="mt-1.5 text-sm text-ink/65">' + esc(r.description) + '</p>' +
+            '<div class="mt-3 flex gap-2">' + actions + '</div>';
+          host.appendChild(row);
+        });
+        host.querySelectorAll('[data-act]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var id = b.getAttribute('data-id'), act = b.getAttribute('data-act');
+            b.disabled = true; b.textContent = '…';
+            postJSON('/healing/recommendations/' + id + '/' + act, {}).then(loadHealing).catch(function(){ b.disabled = false; });
+          });
+        });
+      }
+      function loadHealing() { return AION.get('/healing/recommendations').then(function (d) { renderHealing(d.recommendations || []); }).catch(function(){}); }
+      loadHealing();
+      el('healing-generate').addEventListener('click', function () {
+        var btn = this, lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Generating…';
+        postJSON('/healing/generate', {}).then(function () { return loadHealing(); }).then(function () { btn.disabled = false; btn.textContent = lbl; })
+          .catch(function () { btn.disabled = false; btn.textContent = lbl; });
+      });
+
+      /* ---- Module 11: OCSIE ---- */
+      el('ocsie-employee').addEventListener('change', function () {
+        var pid = this.value; if (!pid) return;
+        el('ocsie-result').innerHTML = '<div class="skeleton h-32"></div>';
+        // The roadmap and unfinished-work calls are allowed to fail without taking the
+        // panel down with them; the impact report is the part that must render.
+        function soft(path) {
+          return AION.get(path).catch(function () { return null; });
+        }
+
+        /* Week-by-week handover plan for whoever takes over. */
+        function handoverHtml(rm) {
+          if (!rm) return '';
+          var weeks = Object.keys(rm).filter(function (k) { return /^week_\d+$/.test(k); }).sort();
+          if (!weeks.length) return '';
+          return '<div class="mt-8 border-t border-black/5 pt-6">' +
+            '<div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">' +
+              '<p class="label text-ink/45">Plan for whoever takes over</p>' +
+              (rm.estimated_full_competency_weeks
+                ? '<p class="text-xs text-ink/45">About ' + rm.estimated_full_competency_weeks +
+                  ' week' + (rm.estimated_full_competency_weeks === 1 ? '' : 's') + ' to be fully up to speed</p>'
+                : '') +
+            '</div>' +
+            '<div class="grid gap-4 md:grid-cols-3">' + weeks.map(function (k, i) {
+              var w = rm[k] || {};
+              var tasks = (w.tasks || []).map(function (t) {
+                return '<li class="text-[13px] leading-relaxed text-ink/65">' + esc(t) + '</li>';
+              }).join('');
+              return '<div class="rounded-xl border border-black/8 bg-white/45 p-4">' +
+                '<p class="text-[11px] uppercase tracking-wide text-ink/40">Week ' + (i + 1) + '</p>' +
+                '<p class="mt-1 text-[14px] font-medium text-ink">' + esc(w.focus || '') + '</p>' +
+                (tasks ? '<ul class="mt-2 list-disc space-y-1 pl-4">' + tasks + '</ul>' : '') +
+              '</div>';
+            }).join('') + '</div></div>';
+        }
+
+        /* Work left mid-flight. Only categories with something in them are shown. */
+        function unfinishedHtml(uw) {
+          if (!uw) return '';
+          var groups = Object.keys(uw).filter(function (k) {
+            return Array.isArray(uw[k]) && uw[k].length;
+          });
+          var body = groups.length
+            ? '<div class="grid gap-3 sm:grid-cols-2">' + groups.map(function (k) {
+                var items = uw[k].slice(0, 3).map(function (it) {
+                  return '<li class="truncate text-[12px] text-ink/60">' + esc(it.title || '') + '</li>';
+                }).join('');
+                return '<div class="rounded-lg border border-black/8 bg-white/45 px-4 py-3">' +
+                  '<p class="text-[13px] font-medium text-ink">' + esc(plain(k)) + '</p>' +
+                  '<p class="mt-0.5 text-[12px] text-ink/50">' + uw[k].length +
+                    ' item' + (uw[k].length === 1 ? '' : 's') + '</p>' +
+                  (items ? '<ul class="mt-1 space-y-0.5">' + items + '</ul>' : '') + '</div>';
+              }).join('') + '</div>'
+            : '<p class="text-[13px] text-ink/45">Nothing of theirs is waiting on a decision.</p>';
+          // Say plainly what was measured and what could not be, rather than letting an
+          // empty result read as "this person left nothing behind".
+          var caveat = (uw.pending_integrations || []).length
+            ? '<p class="mt-2 text-[11px] text-ink/40">Counted from AION\'s own approval queue. ' +
+              esc(uw.pending_integrations.join(', ')) + ' are not connected, so work held there is not included.</p>'
+            : '';
+          return '<div class="mt-8 border-t border-black/5 pt-6">' +
+            '<p class="label text-ink/45 mb-3">Work left mid-flight</p>' + body + caveat + '</div>';
+        }
+        Promise.all([
+          AION.get('/ocsie/business-impact/' + pid),
+          AION.get('/ocsie/continuity-report/' + pid),
+          soft('/ocsie/successor-roadmap/' + pid),
+          soft('/ocsie/unfinished-work/' + pid)
+        ]).then(function (r) {
+          var bi = r[0], rep = r[1], roadmap = r[2], unfinished = r[3],
+              dna = (rep.sections && rep.sections['1_employee_knowledge_dna']) || {};
+          var domains = (dna.primary_domains || []).map(function (d) { return '<span class="tag">' + esc(d) + '</span>'; }).join(' ');
+          function scoreRow(label, v) {
+            var val = pct(v);
+            return '<div class="mb-3"><div class="mb-1 flex justify-between text-sm"><span class="text-ink/70">' + label + '</span><span class="font-medium num-roll">' + val + '</span></div>' +
+              '<div class="meter"><i style="background:' + (val > 66 ? '#E0795C' : val > 33 ? '#C79A2E' : '#1E4D33') + ';transform:scaleX(' + (val/100) + ')"></i></div></div>';
+          }
+          el('ocsie-result').innerHTML =
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">' +
+              '<div><p class="label text-ink/45 mb-4">' + esc(rep.employee_name || 'Employee') + ' · knowledge DNA</p>' +
+                scoreRow('Knowledge criticality', dna.knowledge_criticality_score) +
+                scoreRow('Replacement difficulty', dna.replacement_difficulty_score) +
+                scoreRow('Knowledge risk', dna.knowledge_risk_score) +
+                '<div class="mt-4 flex flex-wrap gap-2">' + domains + '</div></div>' +
+              '<div><p class="label text-ink/45 mb-4">Business impact if they leave</p>' +
+                '<div class="grid grid-cols-2 gap-4 mb-4">' +
+                  statCell(bi.orphaned_knowledge_items, 'Orphaned items', '#C0492B') +
+                  statCell((bi.affected_projects||[]).length, 'Projects affected', '#C79A2E') +
+                  statCell('$' + (bi.revenue_risk_estimate_usd||0), 'Revenue risk', '#12281A') +
+                  statCell(bi.recovery_time_days + 'd', 'Recovery time', '#1E4D33') +
+                '</div>' +
+                '<p class="text-xs text-ink/50 mb-2">Immediate actions</p>' +
+                (bi.immediate_actions||[]).map(function(a){ return '<p class="text-sm text-forest">↳ ' + esc(a) + '</p>'; }).join('') +
+              '</div></div>' +
+              handoverHtml(roadmap) + unfinishedHtml(unfinished);
+        }).catch(function () { el('ocsie-result').innerHTML = '<p class="text-sm text-danger">Could not load continuity report.</p>'; });
+      });
+
+      /* ---- Ingestion ----
+         Two scopes: what this person wrote, and what their department holds. An
+         employee's own work leads; a head cares about the department's output. */
+      var recentScope = (AION.claims().permissions || []).indexOf('review:document') === -1
+        ? 'mine' : 'department';
+
+      function loadRecent() {
+        AION.get('/ingestion/recent?limit=20&scope=' + recentScope).then(function (list) {
+          var host = el('recent-uploads'); host.innerHTML = '';
+          (list || []).slice(0, 8).forEach(function (u) {
+            var row = document.createElement('div'); row.className = 'flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-black/5 pb-3';
+            var st = u.workflow_status || '';
+            row.innerHTML =
+              '<div class="min-w-0"><span class="text-[15px] text-ink">' + esc(u.title) + '</span>' +
+              '<p class="text-xs text-ink/50">' + esc(u.plain_summary || '') + '</p></div>' +
+              '<div class="flex shrink-0 items-center gap-2">' +
+                (st && st !== 'approved'
+                  ? '<span class="pill" style="background:rgba(199,154,46,0.14);color:#8A6A12">Waiting for review</span>' : '') +
+                '<span class="pill" style="background:rgba(18,40,26,0.06);color:#1E4D33">' + esc(u.domain) + '</span>' +
+              '</div>';
+            host.appendChild(row);
+          });
+          if (!(list||[]).length) {
+            fail('recent-uploads', recentScope === 'mine'
+              ? 'You have not added anything yet'
+              : 'No documents in your department yet');
+          }
+          var lbl = el('recent-scope-label');
+          if (lbl) lbl.textContent = recentScope === 'mine' ? 'Yours' : 'Your department';
+        }).catch(function () { fail('recent-uploads', 'Unavailable'); });
+      }
+
+      // Let anyone flip between their own work and the department's.
+      var scopeBtn = el('recent-scope-toggle');
+      if (scopeBtn) {
+        scopeBtn.addEventListener('click', function () {
+          recentScope = recentScope === 'mine' ? 'department' : 'mine';
+          scopeBtn.textContent = recentScope === 'mine' ? 'Show department' : 'Show only mine';
+          loadRecent();
+        });
+        scopeBtn.textContent = recentScope === 'mine' ? 'Show department' : 'Show only mine';
+      }
+      loadRecent();
+      var pickedFile = null;
+      el('ingest-pick').addEventListener('click', function () { el('ingest-file').click(); });
+      el('ingest-file').addEventListener('change', function () {
+        pickedFile = this.files[0] || null;
+        el('ingest-status').textContent = pickedFile ? 'Ready: ' + pickedFile.name : 'No file selected.';
+        el('ingest-upload').disabled = !pickedFile;
+      });
+      el('ingest-upload').addEventListener('click', function () {
+        if (!pickedFile) return;
+        var btn = this, lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Ingesting…';
+        el('ingest-status').textContent = 'Uploading “' + pickedFile.name + '” — extracting, classifying, embedding…';
+        var fd = new FormData(); fd.append('file', pickedFile);
+        AION.authFetch('/ingestion/upload', { method: 'POST', body: fd }).then(function (r) { return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+          .then(function (res) {
+            if (!res.ok) throw new Error((res.j && (res.j.detail || res.j.message)) || 'Upload failed.');
+            el('ingest-status').innerHTML = '<span class="text-forest">Ingested “' + esc(res.j.title || pickedFile.name) + '” · domain ' + esc(res.j.domain || 'other') + '. Index recomputed.</span>';
+            pickedFile = null; el('ingest-file').value = ''; el('ingest-upload').disabled = true; btn.textContent = lbl;
+            loadRecent();
+          }).catch(function (err) { el('ingest-status').innerHTML = '<span class="text-danger">' + esc(err.message || 'Upload failed.') + '</span>'; btn.disabled = false; btn.textContent = lbl; });
+      });
+
+      /* ---- Axon: conversational AI advisor ---- */
+      (function () {
+        var thread = el('axon-thread'), form = el('axon-form'), input = el('axon-input'), sendBtn = el('axon-send');
+        if (!thread) return;
+        var history = [];
+        function mdLite(s) {
+          var safe = esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+          return safe.split(/\n{2,}/).map(function (b) {
+            var lines = b.split('\n');
+            var allBullets = lines.filter(function (l) { return l.trim(); }).every(function (l) { return /^\s*[-*]\s+/.test(l); });
+            if (allBullets && /[-*]\s+/.test(b)) {
+              return '<ul>' + lines.filter(function (l) { return l.trim(); }).map(function (l) { return '<li>' + l.replace(/^\s*[-*]\s+/, '') + '</li>'; }).join('') + '</ul>';
+            }
+            return '<p>' + b.replace(/\n/g, '<br>') + '</p>';
+          }).join('');
+        }
+        function bubble(role, html) {
+          var b = document.createElement('div');
+          b.className = 'msg ' + (role === 'user' ? 'msg-user' : 'msg-axon');
+          b.innerHTML = html; thread.appendChild(b); thread.scrollTop = thread.scrollHeight; return b;
+        }
+        bubble('axon', mdLite("Hi — I'm **Axon**, your organizational intelligence analyst. Ask me anything about your org's health, risks, knowledge or people. Everything I say is grounded in your live data."));
+        function ask(q) {
+          if (!q || !q.trim()) return;
+          bubble('user', esc(q)); input.value = ''; sendBtn.disabled = true;
+          var typing = bubble('axon', '<span class="typing"><span></span><span></span><span></span></span>');
+          postJSON('/advisor/chat', { message: q, history: history }).then(function (r) {
+            typing.remove();
+            var ans = r.answer || 'I could not find an answer.';
+            bubble('axon', mdLite(ans));
+            history.push({ role: 'user', content: q }); history.push({ role: 'assistant', content: ans });
+            if (history.length > 12) history = history.slice(-12);
+            sendBtn.disabled = false; input.focus();
+          }).catch(function () {
+            typing.remove();
+            bubble('axon', '<p style="color:#C0492B">Axon is unavailable right now — check the backend and try again.</p>');
+            sendBtn.disabled = false;
+          });
+        }
+        form.addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
+        document.querySelectorAll('#axon-suggestions .axon-chip').forEach(function (c) {
+          c.addEventListener('click', function () { ask(c.getAttribute('data-q')); });
+        });
+      })();
+
+      /* ---- Sparkline ---- */
+      function drawSpark(id, pts) {
+        var canvas = el(id); if (!canvas) return;
+        var wrap = canvas.parentElement, DPR = Math.min(window.devicePixelRatio || 1, 2);
+        var W = wrap.clientWidth, H = wrap.clientHeight;
+        canvas.width = W * DPR; canvas.height = H * DPR; canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+        var ctx = canvas.getContext('2d'); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        if (!pts.length) return;
+        if (pts.length === 1) pts = [pts[0], pts[0]];
+        var min = Math.min.apply(null, pts) - 4, max = Math.max.apply(null, pts) + 4; if (max === min) max += 1;
+        var pad = 6, x = function (i) { return pad + (W - 2 * pad) * (i / (pts.length - 1)); },
+            y = function (v) { return H - pad - (H - 2 * pad) * ((v - min) / (max - min)); };
+        ctx.beginPath(); ctx.moveTo(x(0), y(pts[0]));
+        pts.forEach(function (v, i) { ctx.lineTo(x(i), y(v)); });
+        ctx.lineTo(x(pts.length - 1), H); ctx.lineTo(x(0), H); ctx.closePath();
+        ctx.fillStyle = 'rgba(66,168,93,0.12)'; ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x(0), y(pts[0]));
+        pts.forEach(function (v, i) { ctx.lineTo(x(i), y(v)); });
+        ctx.strokeStyle = '#1E4D33'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(x(pts.length - 1), y(pts[pts.length - 1]), 3.5, 0, Math.PI * 2); ctx.fillStyle = '#42A85D'; ctx.fill();
+      }
+
+      /* ============ WHO KNOWS WHAT — two-column knowledge map ============
+         A force-directed graph looked different on every load and could not be
+         read. This is a fixed, deterministic layout: people on the left, the things
+         they know on the right, one line per connection. Anything on the right with a
+         single incoming line is a single point of failure, which is the whole point. */
+      AION.get('/mri/brain-map').then(function (d) { renderKnowMap(d); }).catch(function () {});
+
+      function renderKnowMap(data) {
+        var SVGNS = 'http://www.w3.org/2000/svg';
+        var svg = el('knowmap'); if (!svg) return;
+        var SAFE = '#6FD79A', RISK = '#F0917A', LINE = 'rgba(190,225,203,0.22)';
+
+        var all = data.nodes || [];
+        var byId = {}; all.forEach(function (n) { byId[n.id] = n; });
+
+        var people = all.filter(function (n) { return n.type === 'Person'; });
+        var things = all.filter(function (n) { return n.type === 'Knowledge' || n.type === 'Project'; });
+
+        // Only person -> thing links: that is exactly what "who knows what" means.
+        var links = [];
+        (data.edges || []).forEach(function (e) {
+          var a = byId[e.source], b = byId[e.target]; if (!a || !b) return;
+          if (a.type === 'Person' && (b.type === 'Knowledge' || b.type === 'Project')) links.push({ p: a.id, t: b.id });
+          else if (b.type === 'Person' && (a.type === 'Knowledge' || a.type === 'Project')) links.push({ p: b.id, t: a.id });
+        });
+
+        var owners = {}, holds = {};
+        links.forEach(function (l) {
+          (owners[l.t] = owners[l.t] || []).push(l.p);
+          (holds[l.p] = holds[l.p] || []).push(l.t);
+        });
+        things = things.filter(function (t) { return (owners[t.id] || []).length > 0; });
+        people = people.filter(function (p) { return (holds[p.id] || []).length > 0; });
+
+        // Riskiest first — single-owner items sit at the top where the eye lands.
+        things.sort(function (a, b) {
+          var oa = (owners[a.id] || []).length, ob = (owners[b.id] || []).length;
+          return oa - ob || a.label.localeCompare(b.label);
+        });
+        people.sort(function (a, b) { return (holds[b.id] || []).length - (holds[a.id] || []).length; });
+
+        var atRisk = things.filter(function (t) { return (owners[t.id] || []).length === 1; }).length;
+        el('brain-summary').innerHTML =
+          chip(people.length, 'people') + chip(things.length, 'things they know') +
+          chip(atRisk, 'held by one person', atRisk > 0 ? RISK : SAFE);
+        function chip(v, l, col) {
+          return '<div class="text-right"><div class="font-geist text-2xl font-light leading-none"' +
+            (col ? ' style="color:' + col + '"' : '') + '>' + (v == null ? '-' : v) + '</div>' +
+            '<div class="mt-1 text-[11px] leading-tight text-white/50">' + l + '</div></div>';
+        }
+        var hiddenCount = all.length - people.length - things.length;
+        el('brain-note').textContent = hiddenCount > 0
+          ? hiddenCount + ' records (teams, and items nobody is linked to) are not shown here'
+          : '';
+
+        var ROW = 30, TOP = 54, PADX = 26, COLW = 240;
+        var rows = Math.max(people.length, things.length);
+        var H = TOP + rows * ROW + 28;
+        var W = 900;
+        var yP = {}, yT = {};
+        people.forEach(function (p, i) { yP[p.id] = TOP + i * ROW; });
+        things.forEach(function (t, i) { yT[t.id] = TOP + i * ROW; });
+
+        function trim(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+        function add(tag, attrs, text, parent) {
+          var e = document.createElementNS(SVGNS, tag);
+          for (var k in attrs) e.setAttribute(k, attrs[k]);
+          if (text != null) e.textContent = text;
+          (parent || svg).appendChild(e);
+          return e;
+        }
+
+        function draw() {
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          var narrow = W < 620;
+          var colw = narrow ? Math.max(120, (W - 2 * PADX - 70) / 2) : COLW;
+          var leftX = PADX + colw, rightX = W - PADX - colw;
+          if (rightX - leftX < 70) rightX = leftX + 70;
+
+          add('text', { x: PADX, y: 26, fill: 'rgba(255,255,255,0.55)', 'font-size': 11,
+            'font-family': 'Space Grotesk, sans-serif', 'letter-spacing': '0.18em' }, 'PEOPLE');
+          add('text', { x: W - PADX, y: 26, 'text-anchor': 'end', fill: 'rgba(255,255,255,0.55)', 'font-size': 11,
+            'font-family': 'Space Grotesk, sans-serif', 'letter-spacing': '0.18em' }, 'WHAT THEY KNOW');
+
+          var gLinks = add('g', { id: 'km-links' });
+          links.forEach(function (l) {
+            if (yP[l.p] == null || yT[l.t] == null) return;
+            var y1 = yP[l.p], y2 = yT[l.t], mid = (leftX + rightX) / 2;
+            var d = 'M' + leftX + ',' + y1 + ' C' + mid + ',' + y1 + ' ' + mid + ',' + y2 + ' ' + rightX + ',' + y2;
+            var path = add('path', { d: d, fill: 'none', stroke: LINE, 'stroke-width': 1 }, null, gLinks);
+            path.dataset.p = l.p; path.dataset.t = l.t;
+          });
+
+          people.forEach(function (p) {
+            var y = yP[p.id], n = (holds[p.id] || []).length;
+            var g = add('g', { class: 'km-row' });
+            g.dataset.person = p.id;
+            add('rect', { x: PADX - 10, y: y - 12, width: colw + 6, height: 24, rx: 6, fill: 'transparent' }, null, g);
+            add('text', { x: PADX, y: y + 4, fill: 'rgba(255,255,255,0.92)', 'font-size': 12.5,
+              'font-family': 'Inter, sans-serif' }, trim(p.label, narrow ? 16 : 26), g);
+            add('text', { x: leftX - 14, y: y + 4, 'text-anchor': 'end', fill: 'rgba(255,255,255,0.42)',
+              'font-size': 11, 'font-family': 'Inter, sans-serif' }, String(n), g);
+            add('circle', { cx: leftX, cy: y, r: 4.5, fill: SAFE }, null, g);
+          });
+
+          things.forEach(function (t) {
+            var y = yT[t.id], o = (owners[t.id] || []).length, risk = o === 1;
+            var g = add('g', { class: 'km-row' });
+            g.dataset.thing = t.id;
+            add('rect', { x: rightX - 6, y: y - 12, width: colw + 16, height: 24, rx: 6, fill: 'transparent' }, null, g);
+            add('circle', { cx: rightX, cy: y, r: 4.5, fill: risk ? RISK : SAFE }, null, g);
+            add('text', { x: rightX + 14, y: y + 4, fill: 'rgba(255,255,255,0.9)', 'font-size': 12.5,
+              'font-family': 'Inter, sans-serif' }, trim(t.label, narrow ? 18 : 30), g);
+            if (!narrow) {
+              add('text', { x: W - PADX, y: y + 4, 'text-anchor': 'end',
+                fill: risk ? RISK : 'rgba(255,255,255,0.42)', 'font-size': 11,
+                'font-family': 'Inter, sans-serif' }, risk ? 'only 1 person' : o + ' people', g);
+            }
+          });
+
+          wireHover();
+        }
+
+        function wireHover() {
+          var paths = Array.prototype.slice.call(svg.querySelectorAll('#km-links path'));
+          var rowEls = Array.prototype.slice.call(svg.querySelectorAll('.km-row'));
+          function clear() {
+            paths.forEach(function (p) { p.setAttribute('stroke', LINE); p.setAttribute('stroke-width', 1); });
+            rowEls.forEach(function (r) { r.style.opacity = 1; });
+          }
+          rowEls.forEach(function (row) {
+            row.style.cursor = 'pointer';
+            row.addEventListener('mouseenter', function () {
+              var pid = row.dataset.person, tid = row.dataset.thing, linked = {};
+              paths.forEach(function (p) {
+                var on = (pid && p.dataset.p === pid) || (tid && p.dataset.t === tid);
+                p.setAttribute('stroke', on ? SAFE : 'rgba(190,225,203,0.06)');
+                p.setAttribute('stroke-width', on ? 1.8 : 1);
+                if (on) { linked[p.dataset.p] = 1; linked[p.dataset.t] = 1; }
+              });
+              rowEls.forEach(function (r) {
+                var id = r.dataset.person || r.dataset.thing;
+                r.style.opacity = linked[id] ? 1 : 0.25;
+              });
+            });
+            row.addEventListener('mouseleave', clear);
+          });
+        }
+
+        function layout() {
+          W = svg.parentElement.clientWidth || W;
+          svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+          svg.setAttribute('width', W);
+          svg.setAttribute('height', H);
+          svg.style.height = H + 'px';
+          draw();
+        }
+
+        layout();
+        window.addEventListener('resize', layout);
+      }
+
+      /* ================= Enterprise layer (SRS v2 Sections 12-13, 27, 30-37) ========= */
+
+      var BAND = { healthy: SEV.healthy, attention: SEV.warning, critical: SEV.critical };
+      function bandStyle(b) { var s = BAND[b] || SEV.medium; return 'background:' + s.bg + ';color:' + s.fg; }
+      function pill(text, styleAttr) {
+        return '<span class="rounded-full px-2.5 py-1 text-[11px] font-medium" style="' +
+               styleAttr + '">' + esc(text) + '</span>';
+      }
+      /* A meter reads faster than a bare number for non-technical viewers. */
+      function meter(label, value, color) {
+        return '<div class="mt-2">' +
+          '<div class="flex items-baseline justify-between text-[11px] text-ink/50">' +
+            '<span>' + esc(label) + '</span><span class="font-medium text-ink/70">' + value + '</span></div>' +
+          '<div class="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-ink/8">' +
+            '<div class="h-full w-full origin-left rounded-full" style="transform:scaleX(' +
+            (Math.max(0, Math.min(100, value)) / 100) + ');background:' + color +
+            ';transition:transform 240ms ease"></div></div></div>';
+      }
+
+      /* ---- Departments (Section 37) ---- */
+      function loadDepartments() {
+        return AION.get('/enterprise/departments/scorecards').then(function (d) {
+          var host = el('dept-cards'); if (!host) return;
+          var cards = d.scorecards || [];
+          if (!cards.length) { host.innerHTML = '<p class="text-sm text-ink/40">No departments yet.</p>'; return; }
+          host.innerHTML = cards.map(function (c) {
+            // The admin can drill into any department; a head only sees their own card.
+            var clickable = CAN_CROSS && c.department_id;
+            return '<article' + (clickable ? ' data-dept="' + c.department_id + '" role="button" tabindex="0"' +
+                ' class="cursor-pointer rounded-xl border border-ink/10 bg-white/55 p-5 transition-colors duration-200 hover:border-forest/40"'
+                : ' class="rounded-xl border border-ink/10 bg-white/55 p-5"') + '>' +
+              '<div class="flex items-start justify-between gap-3">' +
+                '<div><h3 class="font-geist text-[15px] font-medium text-ink">' + esc(c.name) +
+                  (clickable ? ' <span class="text-[11px] font-normal text-forest/70">view →</span>' : '') + '</h3>' +
+                '<p class="mt-0.5 text-[12px] text-ink/50">' +
+                  c.headcount + ' ' + (c.headcount === 1 ? 'person' : 'people') + ' · ' +
+                  c.knowledge_assets + ' ' + (c.knowledge_assets === 1 ? 'document' : 'documents') +
+                '</p></div>' +
+                pill(c.health_band === 'healthy' ? 'Doing well' :
+                     c.health_band === 'attention' ? 'Needs a look' : 'Needs help', bandStyle(c.health_band)) +
+              '</div>' +
+              meter('Health', c.health_score, HEALTH.green) +
+              meter('Risk', c.risk_score, c.risk_score >= 50 ? HEALTH.red : HEALTH.yellow) +
+              '<dl class="mt-3 grid grid-cols-3 gap-2 border-t border-ink/8 pt-3 text-[11px]">' +
+                '<div><dt class="text-ink/45">Waiting</dt><dd class="font-medium text-ink/75">' + c.pending_approvals + '</dd></div>' +
+                '<div><dt class="text-ink/45">Shared</dt><dd class="font-medium text-ink/75">' + c.marketplace_published + '</dd></div>' +
+                '<div><dt class="text-ink/45">Out of date</dt><dd class="font-medium text-ink/75">' + c.stale_assets + '</dd></div>' +
+              '</dl></article>';
+          }).join('');
+          if (CAN_CROSS) {
+            host.querySelectorAll('[data-dept]').forEach(function (card) {
+              card.addEventListener('click', function () { drillDepartment(card.getAttribute('data-dept')); });
+              card.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); drillDepartment(card.getAttribute('data-dept')); }
+              });
+            });
+          }
+        }).catch(function () { fail('dept-cards', 'Could not load departments'); });
+      }
+
+      /* ---- Admin drill-down: one department's people and their work ---- */
+      function drillDepartment(deptId) {
+        var panel = el('dept-drill'); if (!panel) return;
+        AION.get('/workplace/department?dept_id=' + encodeURIComponent(deptId)).then(function (d) {
+          if (!d || !d.department) return;
+          el('drill-name').textContent = d.department;
+          el('drill-sub').textContent =
+            (d.head ? 'Led by ' + d.head + '. ' : '') + d.employee_count + ' people · ' + d.documents_held + ' documents.';
+          el('drill-people').innerHTML = (d.people || []).map(function (p) {
+            return '<div class="flex items-center justify-between gap-2 rounded-lg border border-ink/8 bg-white/50 px-3 py-2">' +
+              '<span class="min-w-0 truncate text-[13px] text-ink/80">' + esc(p.name) + '</span>' +
+              pill(plain(p.role), bandStyle(p.role === 'dept_head' ? 'healthy' : 'neutral')) + '</div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No one recorded.</p>';
+          el('drill-projects').innerHTML = (d.projects || []).map(function (pr) {
+            return '<div class="rounded-lg border border-ink/8 bg-white/50 px-3 py-2">' +
+              '<p class="text-[13px] text-ink/80">' + esc(pr.name) + '</p>' +
+              '<p class="text-[12px] text-ink/50">' + (pr.people || []).map(esc).join(', ') + '</p></div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No projects recorded.</p>';
+          el('drill-policies').innerHTML = (d.policies || []).map(function (po) {
+            return '<div class="flex items-center justify-between gap-2 rounded-lg border border-ink/8 bg-white/50 px-3 py-2">' +
+              '<span class="min-w-0 truncate text-[13px] text-ink/80">' + esc(po.title) + '</span>' +
+              pill(titleCase(po.status || ''), bandStyle(po.status === 'approved' ? 'healthy' : 'attention')) + '</div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No policies on record.</p>';
+          panel.hidden = false;
+          panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }).catch(function () {});
+      }
+      var drillClose = el('drill-close');
+      if (drillClose) drillClose.addEventListener('click', function () { el('dept-drill').hidden = true; });
+
+      /* ---- Leadership view (Section 27) — hidden unless the role may see it ---- */
+      function loadCommandCenter() {
+        return AION.authFetch('/enterprise/command-center').then(function (r) {
+          if (r.status === 403) return null;       // expected for non-executive roles
+          if (!r.ok) throw new Error(r.status);
+          return r.json();
+        }).then(function (d) {
+          if (!d) return;
+          var sec = el('command-center'); if (!sec) return;
+          sec.hidden = false;
+          var k = d.kpis;
+          el('cc-kpis').innerHTML = [
+            ['Company health', k.company_knowledge_health + '%', k.health_band],
+            ['Documents held', k.total_knowledge_assets, null],
+            ['Waiting for approval', k.pending_approvals, null],
+            ['Teams needing help', k.departments_at_risk, k.departments_at_risk ? 'attention' : 'healthy']
+          ].map(function (row) {
+            return '<div class="rounded-xl border border-ink/10 bg-white/55 p-5">' +
+              '<p class="text-[11px] uppercase tracking-wide text-ink/45">' + esc(row[0]) + '</p>' +
+              '<p class="mt-1 font-geist text-2xl font-light text-ink">' + esc(String(row[1])) + '</p>' +
+              (row[2] ? '<div class="mt-2">' + pill(row[2] === 'healthy' ? 'Good' :
+                        row[2] === 'attention' ? 'Watch' : 'Act now', bandStyle(row[2])) + '</div>' : '') +
+              '</div>';
+          }).join('');
+
+          var LABELS = {
+            highest_knowledge_loss: 'Losing knowledge fastest',
+            highest_risk: 'Most at risk',
+            most_innovative: 'Most new ideas',
+            most_collaborative: 'Shares the most',
+            most_reusable_knowledge_published: 'Publishes the most',
+            healthiest: 'In best shape',
+            weakest: 'Needs the most help',
+            largest_backlog: 'Biggest approval backlog'
+          };
+          el('cc-answers').innerHTML = Object.keys(d.answers).map(function (key) {
+            var a = d.answers[key];
+            return '<div class="flex items-center justify-between gap-3 rounded-lg border border-ink/8 bg-white/45 px-4 py-3">' +
+              '<span class="text-[13px] text-ink/60">' + esc(LABELS[key] || titleCase(key)) + '</span>' +
+              '<span class="text-[13px] font-medium text-ink">' + esc(a.department) + '</span></div>';
+          }).join('');
+        }).catch(function () { /* leadership view stays hidden */ });
+      }
+
+      /* ---- What could go wrong (Section 32) ---- */
+      function loadRisks() {
+        return AION.get('/enterprise/risk-predictions').then(function (d) {
+          var host = el('risk-list'); if (!host) return;
+          var rows = (d.predictions || []).slice(0, 8);
+          if (!rows.length) { host.innerHTML = '<p class="text-sm text-ink/40">Nothing of concern right now.</p>'; return; }
+          host.innerHTML = rows.map(function (p) {
+            var band = p.urgency_score >= 0.5 ? 'critical' : p.urgency_score >= 0.3 ? 'attention' : 'healthy';
+            return '<article class="rounded-xl border border-ink/10 bg-white/55 p-5">' +
+              '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                '<h3 class="font-geist text-[15px] font-medium text-ink">' + esc(plain(p.risk_type)) + '</h3>' +
+                '<div class="flex items-center gap-2">' +
+                  pill(esc(p.department), 'background:rgba(30,77,51,0.08);color:#1E4D33') +
+                  pill(Math.round(p.probability * 100) + '% likely', bandStyle(band)) + '</div></div>' +
+              '<p class="mt-2 text-[13px] leading-relaxed text-ink/60"><span class="text-ink/45">Why:</span> ' + esc(p.reason) + '</p>' +
+              '<p class="mt-1 text-[13px] leading-relaxed text-ink/60"><span class="text-ink/45">If ignored:</span> ' + esc(p.business_impact) + '</p>' +
+              '<p class="mt-2 text-[13px] font-medium leading-relaxed text-forest">Do this: ' + esc(p.recommended_action) + '</p>' +
+              '<p class="mt-2 text-[11px] text-ink/40">Confidence ' + Math.round(p.confidence * 100) + '%</p>' +
+              '</article>';
+          }).join('');
+        }).catch(function () { fail('risk-list', 'Could not load risks'); });
+      }
+
+      /* ---- Approvals (Sections 12-13) ---- */
+      function renderQueue(rows, canReview) {
+        var host = el('approval-queue'); if (!host) return;
+        if (!rows.length) {
+          host.innerHTML = '<p class="text-sm text-ink/40">' +
+            (canReview ? 'Nothing waiting on you.' : 'You do not review documents, so this queue is empty.') + '</p>';
+          return;
+        }
+        host.innerHTML = rows.map(function (r) {
+          var stage = r.status === 'pending_manager' ? 'Waiting for a manager' : 'Waiting for the department head';
+          return '<div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink/8 py-3 last:border-0" data-kid="' + esc(r.knowledge_id) + '">' +
+            '<div class="min-w-0"><p class="truncate text-[14px] text-ink">' + esc(r.title) + '</p>' +
+            '<p class="mt-0.5 text-[12px] text-ink/45">' + esc(stage) +
+              (r.waiting_days != null ? ' · ' + r.waiting_days + ' day' + (r.waiting_days === 1 ? '' : 's') : '') + '</p></div>' +
+            '<div class="flex shrink-0 gap-2">' +
+              '<button class="btn btn-ghost btn-sm" data-act="return">Send back</button>' +
+              '<button class="btn btn-primary btn-sm" data-act="approve">Approve</button>' +
+            '</div></div>';
+        }).join('');
+
+        host.querySelectorAll('button[data-act]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var row = b.closest('[data-kid]'), kid = row.dataset.kid;
+            b.disabled = true; b.textContent = '…';
+            postJSON('/workflow/' + kid + '/' + b.dataset.act, { comment: 'Reviewed from the dashboard' })
+              .then(function () { loadApprovals(); loadDepartments(); loadNotifications(); })
+              .catch(function () { b.disabled = false; b.textContent = 'Retry'; });
+          });
+        });
+      }
+
+      function loadApprovals() {
+        return Promise.all([
+          AION.get('/workflow/queue'),
+          AION.get('/workflow/stats')
+        ]).then(function (res) {
+          var q = res[0], s = res[1];
+          renderQueue(q.queue || [], (q.reviewable_states || []).length > 0);
+          var stats = el('wf-stats');
+          if (stats) {
+            stats.innerHTML = [
+              ['Waiting', s.pending_total, s.pending_total ? 'attention' : 'healthy'],
+              ['Approved', (s.counts || {}).approved || 0, 'healthy']
+            ].map(function (r) { return pill(r[0] + ': ' + r[1], bandStyle(r[2])); }).join('');
+          }
+        }).catch(function () { fail('approval-queue', 'Could not load the queue'); });
+      }
+
+      /* ---- Shared knowledge (Section 30) ---- */
+      function loadMarketplace() {
+        return AION.get('/enterprise/marketplace').then(function (d) {
+          var host = el('market-list'); if (!host) return;
+          var items = d.items || [];
+          if (!items.length) {
+            host.innerHTML = '<p class="text-sm text-ink/40">Nothing shared yet. Approved documents can be published for other teams.</p>';
+            return;
+          }
+          host.innerHTML = items.map(function (m) {
+            return '<article class="rounded-xl border border-ink/10 bg-white/55 p-5" data-mid="' + esc(m.item_id) + '">' +
+              '<div class="flex items-start justify-between gap-3">' +
+                '<h3 class="font-geist text-[15px] font-medium text-ink">' + esc(m.title) + '</h3>' +
+                pill(titleCase(m.category), 'background:rgba(30,77,51,0.08);color:#1E4D33') + '</div>' +
+              '<p class="mt-1 text-[12px] text-ink/50">From ' + esc(m.source_department) +
+                (m.is_own_department ? ' · your team' : '') + '</p>' +
+              (m.summary ? '<p class="mt-2 line-clamp-3 text-[13px] leading-relaxed text-ink/60">' + esc(m.summary) + '</p>' : '') +
+              '<div class="mt-3 flex items-center justify-between border-t border-ink/8 pt-3">' +
+                '<span class="text-[12px] text-ink/45">Used ' + m.reuse_count + ' time' + (m.reuse_count === 1 ? '' : 's') +
+                  (m.average_rating ? ' · rated ' + m.average_rating + '/5' : '') + '</span>' +
+                (m.is_own_department ? '' : '<button class="btn btn-ghost btn-sm" data-act="reuse">Use this</button>') +
+              '</div></article>';
+          }).join('');
+
+          host.querySelectorAll('button[data-act="reuse"]').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var mid = b.closest('[data-mid]').dataset.mid;
+              b.disabled = true; b.textContent = '…';
+              postJSON('/enterprise/marketplace/' + mid + '/reuse', { rating: 5 })
+                .then(function () { loadMarketplace(); loadDepartments(); })
+                .catch(function () { b.disabled = false; b.textContent = 'Retry'; });
+            });
+          });
+        }).catch(function () { fail('market-list', 'Could not load shared knowledge'); });
+      }
+
+      /* ---- Company memory (Section 31) ---- */
+      function loadTimeline() {
+        return AION.get('/enterprise/timeline?limit=12').then(function (d) {
+          var host = el('timeline-list'); if (!host) return;
+          var evs = d.events || [];
+          if (!evs.length) { host.innerHTML = '<p class="text-sm text-ink/40">Nothing recorded yet.</p>'; return; }
+          host.innerHTML = '<ol class="relative border-l border-ink/10 pl-6">' + evs.map(function (e) {
+            var when = e.occurred_at ? new Date(e.occurred_at).toLocaleDateString(undefined,
+              { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+            return '<li class="relative pb-5 last:pb-0">' +
+              '<span class="absolute -left-[27px] top-1.5 h-2 w-2 rounded-full bg-forest/45"></span>' +
+              '<p class="text-[11px] uppercase tracking-wide text-ink/40">' + esc(when) +
+                (e.department ? ' · ' + esc(e.department) : '') + '</p>' +
+              '<p class="mt-0.5 text-[14px] text-ink">' + esc(e.title) + '</p></li>';
+          }).join('') + '</ol>';
+        }).catch(function () { fail('timeline-list', 'Could not load the timeline'); });
+      }
+
+      /* ---- Notifications (Section 35) ---- */
+      function loadNotifications() {
+        return AION.get('/enterprise/notifications?limit=12').then(function (d) {
+          var dot = el('notif-dot'); if (!dot) return;
+          if (d.unread_count > 0) { dot.hidden = false; dot.textContent = d.unread_count > 9 ? '9+' : d.unread_count; }
+          else { dot.hidden = true; }
+          window.__notifs = d.notifications || [];
+        }).catch(function () {});
+      }
+
+      function renderNotifPanel() {
+        var host = el('notif-list'); if (!host) return;
+        var list = window.__notifs || [];
+        if (!list.length) {
+          host.innerHTML = '<p class="px-3 py-6 text-center text-[13px] text-ink/40">You are all caught up.</p>';
+          return;
+        }
+        host.innerHTML = list.slice(0, 12).map(function (n) {
+          var tone = n.severity === 'critical' ? '#C0492B'
+                   : n.severity === 'warning' ? HEALTH.yellow : HEALTH.green;
+          return '<div class="flex gap-3 rounded-lg px-3 py-2.5 ' +
+            (n.is_read ? '' : 'bg-forest/[0.05]') + '">' +
+            '<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:' + tone + '"></span>' +
+            '<div class="min-w-0">' +
+              '<p class="text-[13px] font-medium text-ink">' + esc(n.title || 'Update') + '</p>' +
+              (n.body ? '<p class="text-[12px] text-ink/55">' + esc(n.body) + '</p>' : '') +
+            '</div></div>';
+        }).join('');
+      }
+
+      var notifBtn = el('notif-btn'), notifPanel = el('notif-panel');
+      function closeNotif() {
+        if (notifPanel) notifPanel.hidden = true;
+        if (notifBtn) notifBtn.setAttribute('aria-expanded', 'false');
+      }
+      if (notifBtn && notifPanel) {
+        notifBtn.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          var open = notifPanel.hidden;
+          if (open) {
+            renderNotifPanel();
+            notifPanel.hidden = false;
+            notifBtn.setAttribute('aria-expanded', 'true');
+          } else { closeNotif(); }
+        });
+        var readAll = el('notif-readall');
+        if (readAll) readAll.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          AION.authFetch('/enterprise/notifications/read-all', { method: 'POST' })
+            .then(function () { return loadNotifications(); })
+            .then(function () { renderNotifPanel(); });
+        });
+        document.addEventListener('click', function (ev) {
+          if (!notifPanel.hidden && !notifPanel.contains(ev.target) && ev.target !== notifBtn) closeNotif();
+        });
+        document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeNotif(); });
+      }
+
+      /* ---- Universal search (Section 36) ---- */
+      var searchBox = el('ent-search'), searchOut = el('ent-search-results'), searchTimer = null;
+      if (searchBox && searchOut) {
+        searchBox.addEventListener('input', function () {
+          var q = searchBox.value.trim();
+          clearTimeout(searchTimer);
+          if (q.length < 2) { searchOut.hidden = true; searchOut.innerHTML = ''; return; }
+          // Debounced so a fast typist does not fire a request per keystroke.
+          searchTimer = setTimeout(function () {
+            AION.get('/enterprise/search?q=' + encodeURIComponent(q)).then(function (d) {
+              var r = d.results || {}, groups = [
+                ['Documents', r.knowledge, function (x) { return x.title; }],
+                ['People', r.people, function (x) { return x.name; }],
+                ['Shared', r.marketplace, function (x) { return x.title; }],
+                ['History', r.timeline, function (x) { return x.title; }]
+              ].filter(function (g) { return g[1] && g[1].length; });
+
+              if (!groups.length) {
+                searchOut.innerHTML = '<p class="px-3 py-2 text-[13px] text-ink/45">Nothing found for “' + esc(q) + '”.</p>';
+              } else {
+                searchOut.innerHTML = groups.map(function (g) {
+                  return '<div class="px-1 py-1"><p class="px-2 py-1 text-[11px] uppercase tracking-wide text-ink/40">' +
+                    esc(g[0]) + '</p>' + g[1].slice(0, 4).map(function (x) {
+                      return '<p class="truncate rounded-md px-2 py-1.5 text-[13px] text-ink/75 hover:bg-ink/5">' +
+                        esc(g[2](x)) + '</p>'; }).join('') + '</div>';
+                }).join('');
+              }
+              searchOut.hidden = false;
+            }).catch(function () { searchOut.hidden = true; });
+          }, 220);
+        });
+        document.addEventListener('click', function (ev) {
+          if (!searchOut.contains(ev.target) && ev.target !== searchBox) searchOut.hidden = true;
+        });
+      }
+
+      /* ---- Who shares, who borrows (Section 30.2) ---- */
+      function loadMarketMetrics() {
+        return AION.get('/enterprise/marketplace/metrics').then(function (d) {
+          var host = el('market-metrics'); if (!host) return;
+          var rows = d.departments || [];
+          if (!rows.length) { host.innerHTML = '<p class="text-sm text-ink/40">No sharing activity yet.</p>'; return; }
+          var max = Math.max.apply(null, rows.map(function (r) { return r.publish_count + r.reuse_count; }).concat([1]));
+          host.innerHTML = rows.map(function (r) {
+            var total = r.publish_count + r.reuse_count;
+            return '<div class="rounded-lg border border-ink/8 bg-white/45 px-4 py-3">' +
+              '<p class="text-[13px] font-medium text-ink">' + esc(r.department) + '</p>' +
+              '<p class="mt-0.5 text-[12px] text-ink/50">shared ' + r.publish_count +
+                ' · borrowed ' + r.reuse_count + '</p>' +
+              meter('Activity', Math.round(total / max * 100), HEALTH.green) + '</div>';
+          }).join('');
+        }).catch(function () { fail('market-metrics', 'Could not load sharing activity'); });
+      }
+
+      /* ---- Publish an approved document (Section 30.1) ---- */
+      function loadPublishBox() {
+        var box = el('publish-box'), pick = el('publish-pick'), go = el('publish-go');
+        if (!box || !pick || !go) return Promise.resolve();
+        var claims = AION.claims();
+        // Only roles that actually hold the permission get the control at all.
+        if ((claims.permissions || []).indexOf('publish:marketplace') === -1) return Promise.resolve();
+
+        return Promise.all([
+          AION.get('/enterprise/marketplace'),
+          AION.get('/ingestion/recent?limit=50')
+        ]).then(function (res) {
+          var published = {};
+          (res[0].items || []).forEach(function (m) { published[m.knowledge_id] = 1; });
+          // /ingestion/recent returns a bare array of RecentUpload.
+          var docs = (Array.isArray(res[1]) ? res[1] : []).filter(function (k) {
+            // Publishing unapproved work would route around the approval chain.
+            return k.workflow_status === 'approved' && !k.is_published && !published[k.knowledge_id];
+          });
+          box.hidden = false;
+          if (!docs.length) {
+            pick.innerHTML = '<option value="">Nothing left to share</option>';
+            el('publish-note').textContent = 'Everything approved has already been shared.';
+            return;
+          }
+          // Local truncation: trim() lives inside renderKnowMap and is not visible here.
+          function shorten(s, n) {
+            s = String(s || '');
+            return s.length > n ? s.slice(0, n - 1) + '…' : s;
+          }
+          pick.innerHTML = '<option value="">Choose an approved document…</option>' +
+            docs.map(function (k) {
+              return '<option value="' + esc(k.knowledge_id) + '">' + esc(shorten(k.title, 70)) + '</option>';
+            }).join('');
+          pick.addEventListener('change', function () { go.disabled = !pick.value; });
+          go.addEventListener('click', function () {
+            if (!pick.value) return;
+            go.disabled = true; go.textContent = 'Sharing…';
+            postJSON('/enterprise/marketplace/publish', { knowledge_id: pick.value, category: 'sop' })
+              .then(function () {
+                go.textContent = 'Share it';
+                loadMarketplace(); loadMarketMetrics(); loadPublishBox(); loadDepartments();
+              })
+              .catch(function () { go.disabled = false; go.textContent = 'Retry'; });
+          });
+        }).catch(function (e) {
+          // Never swallow this silently: a throw in here leaves the control on screen
+          // but inert, which looks like a broken button rather than a missing feature.
+          console.warn('AION: publish control unavailable —', e && e.message);
+          box.hidden = true;
+        });
+      }
+
+      /* ---- Learning Center (Section 34) ---- */
+      function loadLearning() {
+        return AION.get('/enterprise/learning').then(function (d) {
+          var host = el('learning-gaps'); if (!host) return;
+          var gaps = d.suggestions || [];
+          if (!gaps.length) {
+            host.innerHTML = '<p class="text-sm text-ink/40">No obvious gaps right now.</p>';
+          } else {
+            host.innerHTML = gaps.map(function (g) {
+              var reading = (g.recommended_reading || []).map(function (r) {
+                return '<li class="truncate text-[13px] text-ink/70">' + esc(r.title) + '</li>';
+              }).join('');
+              return '<article class="min-w-0 rounded-xl border border-ink/10 bg-white/55 p-5">' +
+                '<div class="flex items-start justify-between gap-3">' +
+                  '<h3 class="font-geist text-[15px] font-medium text-ink">' + esc(titleCase(g.skill_area)) + '</h3>' +
+                  pill(g.coverage_items + ' doc' + (g.coverage_items === 1 ? '' : 's'),
+                       bandStyle(g.coverage_items <= 1 ? 'critical' : g.coverage_items <= 3 ? 'attention' : 'healthy')) +
+                '</div>' +
+                '<p class="mt-2 text-[13px] leading-relaxed text-ink/55">' + esc(g.why) + '</p>' +
+                (reading ? '<p class="mt-3 text-[11px] uppercase tracking-wide text-ink/40">Start here</p>' +
+                           '<ul class="mt-1 space-y-1">' + reading + '</ul>'
+                         : '<p class="mt-3 text-[12px] text-ink/40">Nothing written on this yet.</p>') +
+                '</article>';
+            }).join('');
+          }
+
+          var recHost = el('learning-records'), recs = d.my_records || [];
+          recHost.innerHTML = recs.length
+            ? recs.map(function (r) {
+                return '<div class="flex items-center justify-between gap-3 border-b border-ink/8 py-2 last:border-0">' +
+                  '<span class="truncate text-[13px] text-ink/75">' + esc(r.title) + '</span>' +
+                  pill(titleCase(r.status), bandStyle(r.status === 'completed' ? 'healthy' : 'attention')) + '</div>';
+              }).join('')
+            : '<p class="text-sm text-ink/40">Nothing assigned to you yet.</p>';
+
+          var eff = el('learning-effect');
+          if (eff) {
+            eff.textContent = d.average_knowledge_gain != null
+              ? 'Average knowledge gain after finishing: ' + d.average_knowledge_gain
+              : (recs.length ? d.completed_count + ' completed' : '');
+          }
+        }).catch(function () { fail('learning-gaps', 'Could not load learning'); });
+      }
+
+      /* ---- Where you sit in the company (every role) ---- */
+      function loadOrgOverview() {
+        return AION.get('/enterprise/org-overview').then(function (d) {
+          var o = d.organization;
+          var k = el('org-kpis'); if (!k) return;
+          k.innerHTML =
+            statCell(o.knowledge_health + '%', 'Company health', HEALTH.green) +
+            statCell(o.departments, 'Teams', '#12281A') +
+            statCell(o.people, 'People', '#12281A') +
+            statCell(o.documents_held, 'Documents held', '#12281A');
+
+          var note = el('org-scope-note');
+          if (note) note.textContent = 'You see full detail for ' + d.sees_full_detail_for + '.';
+
+          var m = el('org-mine'), y = d.your_department;
+          if (m) {
+            m.innerHTML = y
+              ? '<div class="rounded-xl border border-ink/10 bg-white/45 p-5">' +
+                  '<p class="text-[13px] text-ink/55">Your team</p>' +
+                  '<p class="mt-1 font-geist text-xl font-light text-ink">' + esc(y.name) + '</p>' +
+                  '<p class="mt-2 text-[13px] text-ink/65">Health <span class="font-medium text-ink">' +
+                    y.health_score + '</span> · ranked <span class="font-medium text-ink">' +
+                    y.rank + ' of ' + y.of + '</span> · ' + y.documents_held + ' documents</p>' +
+                  '<p class="mt-1 text-[13px] ' + (y.compared_to_company >= 0 ? 'text-forest' : 'text-ink/55') + '">' +
+                    (y.compared_to_company >= 0 ? 'Above' : 'Below') + ' the company average by ' +
+                    Math.abs(y.compared_to_company) + ' points.</p>' +
+                '</div>'
+              : '<p class="text-[13px] text-ink/50">You look after the whole organization, not one team.</p>';
+          }
+
+          var lad = el('org-ladder');
+          if (lad) {
+            // Empty for department-scoped roles by design: teams are isolated, and
+            // another team's standing is not theirs to see. Say that, rather than
+            // rendering an empty strip that reads as a loading failure.
+            lad.innerHTML = d.departments.length
+              ? d.departments.map(function (x) {
+                  var own = x.is_own_department;
+                  return '<span class="rounded-full border px-3 py-1.5 text-[12px] ' +
+                    (own ? 'border-forest/40 bg-forest/10 text-forest font-medium'
+                         : 'border-ink/12 bg-white/50 text-ink/60') + '">' +
+                    x.rank + '. ' + esc(x.name) + (own ? ' · you' : '') + '</span>';
+                }).join('')
+              : '<p class="text-[13px] text-ink/50">Teams are kept separate, so other teams’ scores are not shown here. ' +
+                'What they choose to share appears under <a href="#shared" class="text-forest underline decoration-forest/30 underline-offset-2">Shared knowledge</a>.</p>';
+            var head = lad.previousElementSibling;
+            if (head) head.textContent = d.departments.length ? 'Every team, ranked' : 'Other teams';
+          }
+        }).catch(function (e) {
+          console.warn('AION: org overview unavailable —', e && e.message);
+          fail('org-kpis', 'Could not load the company view');
+        });
+      }
+
+      /* ---- Your people (managers and heads only) ---- */
+      function loadMyTeam() {
+        var sec = el('my-team'); if (!sec) return Promise.resolve();
+        return AION.get('/enterprise/my-team').then(function (d) {
+          sec.hidden = false;
+          var host = el('team-list');
+          host.innerHTML = (d.people || []).map(function (p) {
+            var risky = p.awaiting_review > 0;
+            return '<div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink/8 bg-white/45 px-4 py-3">' +
+              '<div><span class="text-[14px] text-ink">' + esc(p.name) + '</span>' +
+                '<span class="ml-2 text-[12px] text-ink/45">' + esc(plain(p.role)) + '</span></div>' +
+              '<div class="flex items-center gap-2">' +
+                pill(p.documents_written + ' written', bandStyle(p.documents_written ? 'healthy' : 'attention')) +
+                (risky ? pill(p.awaiting_review + ' awaiting review', bandStyle('attention')) : '') +
+              '</div></div>';
+          }).join('') || '<p class="text-sm text-ink/40">No people recorded.</p>';
+
+          var s = el('team-silent');
+          if (s) {
+            s.textContent = (d.writes_nothing || []).length
+              ? 'Nothing written down yet by: ' + d.writes_nothing.join(', ') +
+                '. If they left tomorrow, what they know goes with them.'
+              : '';
+          }
+        }).catch(function () {
+          // 403 for employees is the designed answer, not a failure — stay hidden.
+          sec.hidden = true;
+        });
+      }
+
+      /* ================= Workplace layer (handwritten notes) ================= */
+
+      var CAN_REVIEW = (AION.claims().permissions || []).indexOf('review:document') !== -1;
+      var CAN_CROSS  = (AION.claims().permissions || []).indexOf('read:cross_department') !== -1;
+
+      /* ---- Attachments: text and files travel together everywhere ---- */
+      // Upload a File, resolve to its attachment id (for the message/request payload).
+      function uploadAttachment(file) {
+        var fd = new FormData(); fd.append('file', file);
+        return AION.authFetch('/workplace/attachments', { method: 'POST', body: fd })
+          .then(function (r) { if (!r.ok) return r.json().then(function (e) { throw new Error(e.detail || 'Upload failed'); }); return r.json(); })
+          .then(function (j) { return j.id; });
+      }
+      var CLIP = '<svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">' +
+        '<path d="M13.5 7.5 8 13a2.5 2.5 0 0 1-3.5-3.5l6-6a3.5 3.5 0 0 1 5 5l-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      // A download control for an attachment {id, filename}.
+      function attachLink(a) {
+        if (!a) return '';
+        return '<button type="button" data-att="' + esc(a.id) + '" data-attname="' + esc(a.filename) + '" ' +
+          'class="mt-1 inline-flex items-center gap-1 text-[12px] text-forest hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40 rounded">' +
+          CLIP + '<span>' + esc(a.filename) + '</span></button>';
+      }
+      // One delegated handler downloads any attachment with the auth token attached.
+      document.addEventListener('click', function (ev) {
+        var b = ev.target.closest ? ev.target.closest('[data-att]') : null;
+        if (!b) return;
+        var id = b.getAttribute('data-att'), name = b.getAttribute('data-attname') || 'file';
+        AION.authFetch('/workplace/attachments/' + id).then(function (r) {
+          if (!r.ok) throw new Error('download'); return r.blob();
+        }).then(function (blob) {
+          var url = URL.createObjectURL(blob), a = document.createElement('a');
+          a.href = url; a.download = name; document.body.appendChild(a); a.click();
+          a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        }).catch(function () {});
+      });
+      // Wire a "attach a file" button + hidden input; keeps the chosen File and shows its name.
+      function wireFilePicker(btnId, inputId, nameId) {
+        var btn = el(btnId), input = el(inputId), tag = el(nameId);
+        if (!btn || !input) return { get: function () { return null; }, clear: function () {} };
+        btn.addEventListener('click', function () { input.click(); });
+        input.addEventListener('change', function () {
+          if (tag) tag.textContent = input.files && input.files[0] ? input.files[0].name : '';
+        });
+        return {
+          get: function () { return input.files && input.files[0] ? input.files[0] : null; },
+          clear: function () { input.value = ''; if (tag) tag.textContent = ''; }
+        };
+      }
+
+      /* ---- Messages inbox ---- */
+      function loadMessages() {
+        return AION.get('/workplace/messages?limit=30').then(function (d) {
+          var host = el('messages-list'); if (!host) return;
+          var msgs = d.messages || [];
+          if (!msgs.length) { host.innerHTML = '<p class="text-[13px] text-ink/40">No messages yet.</p>'; return; }
+          host.innerHTML = msgs.map(function (m) {
+            var when = m.sent_at ? new Date(m.sent_at).toLocaleString() : '';
+            return '<div class="rounded-lg border border-ink/8 bg-white/45 px-4 py-3">' +
+              '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                '<span class="text-[13px] font-medium text-ink">' + esc(m.from) +
+                  (m.kind === 'announcement' ? ' <span class="text-ink/40 font-normal">· to the department</span>' : '') + '</span>' +
+                '<span class="text-[11px] text-ink/40">' + esc(when) + '</span></div>' +
+              (m.subject ? '<p class="mt-0.5 text-[12px] font-medium text-ink/70">' + esc(m.subject) + '</p>' : '') +
+              '<p class="mt-1 text-[13px] text-ink/70">' + esc(m.body) + '</p>' +
+              attachLink(m.attachment) +
+            '</div>';
+          }).join('');
+        }).catch(function () { fail('messages-list', 'Could not load messages'); });
+      }
+
+      /* ---- Your own record ---- */
+      /* ---- My Department: who is here, who does what, its policies (notes ii–iii) ---- */
+      function loadDepartmentDetail() {
+        return AION.get('/workplace/department').then(function (d) {
+          if (!d || !d.department) { var s = el('dept-detail'); if (s) s.hidden = true; return; }
+          el('dept-detail-name').textContent = d.department;
+          el('dept-detail-sub').textContent =
+            (d.head ? 'Led by ' + d.head + '. ' : '') + d.employee_count + ' people.';
+          el('dept-detail-kpis').innerHTML =
+            statCell(d.employee_count, 'People', '#12281A') +
+            statCell((d.projects || []).length, 'Projects', '#12281A') +
+            statCell(d.documents_held, 'Documents', HEALTH.green);
+
+          el('dept-detail-people').innerHTML = (d.people || []).map(function (p) {
+            return '<div class="flex items-center justify-between gap-3 rounded-lg border border-ink/8 bg-white/45 px-3 py-2">' +
+              '<span class="min-w-0 truncate text-[13px] text-ink/80">' + esc(p.name) + '</span>' +
+              pill(plain(p.role), bandStyle(p.role === 'dept_head' ? 'healthy' : 'neutral')) + '</div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No one recorded.</p>';
+
+          el('dept-detail-projects').innerHTML = (d.projects || []).map(function (pr) {
+            return '<div class="rounded-lg border border-ink/8 bg-white/45 px-3 py-2">' +
+              '<p class="text-[13px] text-ink/80">' + esc(pr.name) + '</p>' +
+              '<p class="text-[12px] text-ink/50">' + (pr.people || []).map(esc).join(', ') + '</p></div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No projects recorded yet.</p>';
+
+          el('dept-detail-policies').innerHTML = (d.policies || []).map(function (po) {
+            var tone = po.status === 'approved' ? 'healthy' : 'attention';
+            return '<div class="flex items-center justify-between gap-3 rounded-lg border border-ink/8 bg-white/45 px-3 py-2">' +
+              '<span class="min-w-0 truncate text-[13px] text-ink/80">' + esc(po.title) + '</span>' +
+              pill(titleCase(po.status || ''), bandStyle(tone)) + '</div>';
+          }).join('') || '<p class="text-[13px] text-ink/40">No department policies on record yet.</p>';
+        }).catch(function () { var s = el('dept-detail'); if (s) s.hidden = true; });
+      }
+
+      function loadMyProfile() {
+        return AION.get('/workplace/me/profile').then(function (p) {
+          el('profile-name').textContent = p.name || '—';
+          el('profile-sub').textContent =
+            [p.designation, p.department].filter(Boolean).join(' · ') +
+            (p.head_of_department ? ' · reports to ' + p.head_of_department : '');
+          el('profile-code').textContent = p.employee_code || '';
+          el('profile-grid').innerHTML =
+            statCell(p.documents_written, 'Documents written', '#12281A') +
+            statCell(p.documents_awaiting_review, 'Awaiting review', HEALTH.yellow) +
+            statCell((p.skills || []).length, 'Skills on record', '#12281A') +
+            statCell(p.joining_date ? String(p.joining_date).slice(0, 4) : '—', 'Joined', '#12281A');
+          function list(host, arr, empty) {
+            el(host).innerHTML = (arr && arr.length)
+              ? arr.map(function (x) {
+                  return '<p class="text-[13px] text-ink/70">' + esc(x) + '</p>'; }).join('')
+              : '<p class="text-[13px] text-ink/40">' + empty + '</p>';
+          }
+          list('profile-current', p.currently_working_on, 'Nothing assigned right now.');
+          list('profile-done', p.recently_completed, 'Nothing recorded yet.');
+          // Give employees a way to write back to their head (two-way messaging).
+          if (!CAN_REVIEW && p.head_of_department_id) {
+            window.__headId = p.head_of_department_id;
+            var rb = el('msg-reply'); if (rb) rb.hidden = false;
+            var rl = el('reply-label'); if (rl && p.head_of_department) rl.textContent = 'Message ' + p.head_of_department;
+          }
+        }).catch(function (e) {
+          console.warn('AION: profile unavailable —', e && e.message);
+          fail('profile-grid', 'Could not load your record');
+        });
+      }
+
+      var replyPick = wireFilePicker('reply-attach', 'reply-file', 'reply-filename');
+      var replyBtn = el('reply-send');
+      if (replyBtn) replyBtn.addEventListener('click', function () {
+        var to = window.__headId, body = el('reply-body').value.trim(), note = el('reply-status');
+        var f = replyPick.get();
+        if (!to) { note.textContent = 'No head on record to message.'; return; }
+        if (!body && !f) { note.textContent = 'Write something or attach a file.'; return; }
+        replyBtn.disabled = true; replyBtn.textContent = 'Sending…';
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/messages', { body: body, recipient_id: to, attachment_id: aid }); })
+          .then(function () { note.textContent = 'Sent to your head.' + (f ? ' File attached.' : ''); el('reply-body').value = ''; replyPick.clear(); })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { replyBtn.disabled = false; replyBtn.textContent = 'Send'; });
+      });
+
+      /* ---- Leave ---- */
+      function loadLeave() {
+        return AION.get('/workplace/leave/me').then(function (d) {
+          // Admins and executives do not take leave — they approve it. Hide the panel.
+          if (d.takes_leave === false) { var ls = el('my-leave'); if (ls) ls.hidden = true; return; }
+          el('leave-approver').textContent = d.approver
+            ? 'Requests go to ' + d.approver + '. You get ' + d.entitlement_days + ' days a year.'
+            : 'You get ' + d.entitlement_days + ' days a year.';
+          el('leave-kpis').innerHTML =
+            statCell(d.remaining_days, 'Days left', HEALTH.green) +
+            statCell(d.taken_days, 'Taken', '#12281A') +
+            statCell(d.pending_days, 'Awaiting a decision', HEALTH.yellow);
+          el('leave-history').innerHTML = (d.requests || []).length
+            ? d.requests.map(function (r) {
+                var tone = r.status === 'approved' ? 'healthy'
+                         : r.status === 'rejected' ? 'critical' : 'attention';
+                return '<div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/8 bg-white/45 px-4 py-2.5">' +
+                  '<span class="text-[13px] text-ink/75">' + esc(r.start_date) + ' to ' + esc(r.end_date) +
+                    ' · ' + r.days + ' day' + (r.days === 1 ? '' : 's') +
+                    (r.reason ? ' · ' + esc(r.reason) : '') + '</span>' +
+                  pill(titleCase(r.status), bandStyle(tone)) + '</div>' +
+                  (r.decision_note ? '<p class="px-4 pb-2 text-[12px] text-ink/50">' + esc(r.decision_note) + '</p>' : '') +
+                  (r.attachment ? '<div class="px-4 pb-2">' + attachLink(r.attachment) + '</div>' : '');
+              }).join('')
+            : '<p class="text-[13px] text-ink/40">You have not asked for any leave this year.</p>';
+        }).catch(function () { fail('leave-kpis', 'Could not load your leave'); });
+      }
+
+      var leavePick = wireFilePicker('leave-attach', 'leave-file', 'leave-filename');
+      var leaveBtn = el('leave-send');
+      if (leaveBtn) leaveBtn.addEventListener('click', function () {
+        var from = el('leave-from').value, to = el('leave-to').value, why = el('leave-reason').value.trim();
+        var note = el('leave-msg');
+        if (!from || !to) { note.textContent = 'Pick both dates first.'; return; }
+        leaveBtn.disabled = true; leaveBtn.textContent = 'Sending…';
+        var f = leavePick.get();
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/leave', { start_date: from, end_date: to, reason: why || null, attachment_id: aid }); })
+          .then(function (r) {
+            note.textContent = r.days + ' day(s) sent to ' + (r.sent_to || 'your head') + '.' + (f ? ' File attached.' : '');
+            el('leave-reason').value = ''; leavePick.clear();
+            loadLeave(); loadNotifications();
+          })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send that.'; })
+          .then(function () { leaveBtn.disabled = false; leaveBtn.textContent = 'Send to my head'; });
+      });
+
+      /* ---- Project / policy requests ---- */
+      function loadMyRequests() {
+        return AION.get('/workplace/requests/me').then(function (d) {
+          el('req-history').innerHTML = (d.requests || []).length
+            ? d.requests.map(function (r) {
+                var tone = r.status === 'approved' ? 'healthy'
+                         : r.status === 'returned' ? 'attention' : 'attention';
+                return '<div class="rounded-lg border border-ink/8 bg-white/45 px-4 py-2.5">' +
+                  '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                    '<span class="text-[13px] text-ink/75">' + esc(r.title) +
+                      ' <span class="text-ink/40">· ' + esc(r.type === 'interdept' ? 'cross-department' : r.type) + '</span></span>' +
+                    pill(titleCase(r.status), bandStyle(tone)) + '</div>' +
+                  (r.feedback ? '<p class="mt-1 text-[12px] text-ink/50">' + esc(r.feedback) + '</p>' : '') +
+                  attachLink(r.attachment) +
+                '</div>';
+              }).join('')
+            : '<p class="text-[13px] text-ink/40">Nothing sent yet.</p>';
+        }).catch(function () { fail('req-history', 'Could not load your requests'); });
+      }
+
+      var reqPick = wireFilePicker('req-attach', 'req-file', 'req-filename');
+      var reqBtn = el('req-send');
+      if (reqBtn) reqBtn.addEventListener('click', function () {
+        var title = el('req-title').value.trim(), type = el('req-type').value, note = el('req-msg');
+        if (!title) { note.textContent = 'Give it a title first.'; return; }
+        reqBtn.disabled = true; reqBtn.textContent = 'Sending…';
+        var f = reqPick.get();
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/requests', { title: title, request_type: type, attachment_id: aid }); })
+          .then(function (r) {
+            note.textContent = 'Sent to ' + (r.sent_to || 'your head') + '.' + (f ? ' File attached.' : '');
+            el('req-title').value = ''; reqPick.clear();
+            loadMyRequests(); loadHeadQueue();
+          })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send that.'; })
+          .then(function () { reqBtn.disabled = false; reqBtn.textContent = 'Send'; });
+      });
+
+      /* ---- Head: the decision queue ---- */
+      function decideRow(label, sub, onYes, onNo) {
+        var wrap = document.createElement('div');
+        wrap.className = 'rounded-lg border border-ink/8 bg-white/45 px-4 py-3';
+        wrap.innerHTML =
+          '<p class="text-[13px] text-ink/80">' + label + '</p>' +
+          (sub ? '<p class="text-[12px] text-ink/50">' + sub + '</p>' : '') +
+          '<div class="mt-2 flex gap-2">' +
+            '<button class="btn btn-primary btn-sm" data-yes>Approve</button>' +
+            '<button class="btn btn-ghost btn-sm" data-no>Decline</button></div>';
+        wrap.querySelector('[data-yes]').addEventListener('click', onYes);
+        wrap.querySelector('[data-no]').addEventListener('click', onNo);
+        return wrap;
+      }
+
+      function loadHeadQueue() {
+        if (!CAN_REVIEW) return Promise.resolve();
+        var sec = el('head-queue'); if (sec) sec.hidden = false;
+        var a = AION.get('/workplace/leave/queue').then(function (d) {
+          var host = el('queue-leave'); host.innerHTML = '';
+          if (!d.count) { host.innerHTML = '<p class="text-[13px] text-ink/40">Nothing waiting.</p>'; return; }
+          d.requests.forEach(function (r) {
+            function decide(ok) {
+              return function () {
+                postJSON('/workplace/leave/' + r.id + '/decide',
+                         { approve: ok, note: ok ? 'Approved.' : 'Not approved.' })
+                  .then(function () { loadHeadQueue(); loadLeave(); });
+              };
+            }
+            host.appendChild(decideRow(
+              esc(r.who) + ' · ' + r.days + ' day' + (r.days === 1 ? '' : 's'),
+              esc(r.start_date) + ' to ' + esc(r.end_date) + (r.reason ? ' · ' + esc(r.reason) : '') + attachLink(r.attachment),
+              decide(true), decide(false)));
+          });
+        }).catch(function () { fail('queue-leave', 'Unavailable'); });
+
+        var b = AION.get('/workplace/requests/queue').then(function (d) {
+          var host = el('queue-requests'); host.innerHTML = '';
+          if (!d.count) { host.innerHTML = '<p class="text-[13px] text-ink/40">Nothing waiting.</p>'; return; }
+          d.requests.forEach(function (r) {
+            function decide(ok) {
+              return function () {
+                postJSON('/workplace/requests/' + r.id + '/decide',
+                         { approve: ok, note: ok ? 'Approved.' : 'Returned for changes.' })
+                  .then(function () { loadHeadQueue(); loadMyRequests(); });
+              };
+            }
+            host.appendChild(decideRow(
+              esc(r.title) + ' <span class="text-ink/40">· ' + esc(r.type === 'interdept' ? 'cross-department' : r.type) + '</span>',
+              'from ' + esc(r.who) + attachLink(r.attachment), decide(true), decide(false)));
+          });
+        }).catch(function () { fail('queue-requests', 'Unavailable'); });
+
+        return Promise.all([a, b]);
+      }
+
+      var msgPick = wireFilePicker('msg-attach', 'msg-file', 'msg-filename');
+      var msgBtn = el('msg-send');
+      if (msgBtn) msgBtn.addEventListener('click', function () {
+        var body = el('msg-body').value.trim(), note = el('msg-status');
+        var f = msgPick.get();
+        if (!body && !f) { note.textContent = 'Write something or attach a file.'; return; }
+        msgBtn.disabled = true; msgBtn.textContent = 'Sending…';
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/messages', { body: body, attachment_id: aid }); })
+          .then(function (r) { note.textContent = 'Sent to ' + r.sent_to + ' people.' + (f ? ' File attached.' : ''); el('msg-body').value = ''; msgPick.clear(); })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { msgBtn.disabled = false; msgBtn.textContent = 'Send to all'; });
+      });
+
+      /* ---- Cross-department: message another department's head ---- */
+      function loadCrossDept() {
+        if (!CAN_REVIEW) return Promise.resolve();
+        return AION.get('/workplace/heads').then(function (d) {
+          var sel = el('cd-head'); if (!sel) return;
+          var heads = d.heads || [];
+          if (!heads.length) return; // sole department — nobody to message
+          sel.innerHTML = heads.map(function (h) {
+            return '<option value="' + h.id + '">' + esc(h.department) + ' — ' + esc(h.name) + '</option>';
+          }).join('');
+          el('cross-dept').hidden = false;
+        }).catch(function () { /* not permitted; stays hidden */ });
+      }
+      var cdPick = wireFilePicker('cd-attach', 'cd-file', 'cd-filename');
+      var cdBtn = el('cd-send');
+      if (cdBtn) cdBtn.addEventListener('click', function () {
+        var to = el('cd-head').value, body = el('cd-body').value.trim(), note = el('cd-status');
+        var f = cdPick.get();
+        if (!to) { note.textContent = 'Pick a department first.'; return; }
+        if (!body && !f) { note.textContent = 'Write a message or attach a file.'; return; }
+        cdBtn.disabled = true; cdBtn.textContent = 'Sending…';
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/messages', { body: body, recipient_id: to, attachment_id: aid }); })
+          .then(function () {
+            var label = el('cd-head').options[el('cd-head').selectedIndex].text;
+            note.textContent = 'Message sent to ' + label + '.' + (f ? ' File attached.' : ''); el('cd-body').value = ''; cdPick.clear();
+          })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { cdBtn.disabled = false; cdBtn.textContent = 'Send message'; });
+      });
+
+      var cdReq = el('cd-request');
+      if (cdReq) cdReq.addEventListener('click', function () {
+        var to = el('cd-head').value, body = el('cd-body').value.trim(), note = el('cd-status');
+        var f = cdPick.get();
+        if (!to) { note.textContent = 'Pick a department first.'; return; }
+        if (!body) { note.textContent = 'Say what you need first.'; return; }
+        cdReq.disabled = true; cdReq.textContent = 'Sending…';
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/interdept-request', { to_head_id: to, title: body, attachment_id: aid }); })
+          .then(function (r) {
+            note.textContent = 'Approval request sent to ' + (r.sent_to || 'that head') + '.' + (f ? ' File attached.' : '') + ' You will see the outcome in “My requests”.';
+            el('cd-body').value = ''; cdPick.clear();
+          })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { cdReq.disabled = false; cdReq.textContent = 'Request approval'; });
+      });
+
+      /* ---- Fund chain ---- */
+      function loadFunds() {
+        return AION.get('/workplace/funds').then(function (d) {
+          var sec = el('funds'); if (sec) sec.hidden = false;
+          if (CAN_REVIEW) el('fund-raise').hidden = false;
+          var host = el('fund-list');
+          host.innerHTML = '';
+          if (!d.count) {
+            host.innerHTML = '<p class="text-[13px] text-ink/40">No fund requests.</p>';
+          }
+          d.requests.forEach(function (r) {
+            var stageLabel = r.stage === 'with_finance' ? 'With Finance'
+                           : r.stage === 'with_admin' ? 'With the administrator'
+                           : 'Department told';
+            var tone = r.status === 'approved' ? 'healthy'
+                     : r.status === 'rejected' ? 'critical' : 'attention';
+            var wrap = document.createElement('div');
+            wrap.className = 'rounded-lg border border-ink/8 bg-white/45 px-4 py-3';
+            var canAct =
+              (r.stage === 'with_finance' && d.can_decide_finance) ||
+              (r.stage === 'with_admin' && d.can_decide_admin);
+            wrap.innerHTML =
+              '<div class="flex flex-wrap items-center justify-between gap-2">' +
+                '<span class="text-[13px] text-ink/80">' + esc(r.title) +
+                  ' <span class="text-ink/45">· ' + Number(r.amount).toLocaleString() + ' ' + esc(r.currency) + '</span></span>' +
+                pill(stageLabel, bandStyle(tone)) + '</div>' +
+              '<p class="mt-0.5 text-[12px] text-ink/50">raised by ' + esc(r.raised_by_department) +
+                (r.finance_note ? ' · Finance: ' + esc(r.finance_note) : '') +
+                (r.admin_note ? ' · Admin: ' + esc(r.admin_note) : '') + '</p>' +
+              (canAct && r.status === 'pending'
+                ? '<div class="mt-2 flex gap-2">' +
+                  '<button class="btn btn-primary btn-sm" data-yes>Approve</button>' +
+                  '<button class="btn btn-ghost btn-sm" data-no>Decline</button></div>' : '');
+            if (canAct && r.status === 'pending') {
+              function decide(ok) {
+                return function () {
+                  postJSON('/workplace/funds/' + r.id + '/decide',
+                           { approve: ok, note: ok ? 'Approved.' : 'Declined.' })
+                    .then(function () { loadFunds(); loadNotifications(); });
+                };
+              }
+              wrap.querySelector('[data-yes]').addEventListener('click', decide(true));
+              wrap.querySelector('[data-no]').addEventListener('click', decide(false));
+            }
+            host.appendChild(wrap);
+          });
+        }).catch(function () { /* not visible to this role */ });
+      }
+
+      var fundBtn = el('fund-send');
+      if (fundBtn) fundBtn.addEventListener('click', function () {
+        var t = el('fund-title').value.trim(), a = parseFloat(el('fund-amount').value), note = el('fund-msg');
+        if (!t || !(a > 0)) { note.textContent = 'Give it a name and an amount.'; return; }
+        fundBtn.disabled = true; fundBtn.textContent = 'Sending…';
+        postJSON('/workplace/funds', { title: t, amount: a })
+          .then(function () { note.textContent = 'Sent to Finance.'; el('fund-title').value=''; el('fund-amount').value=''; loadFunds(); })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { fundBtn.disabled = false; fundBtn.textContent = 'Send to Finance'; });
+      });
+
+      /* ---- Finance overview ---- */
+      function loadFinance() {
+        return AION.get('/workplace/finance/overview').then(function (d) {
+          var sec = el('finance'); if (sec) sec.hidden = false;
+          el('finance-kpis').innerHTML =
+            statCell(Math.round(d.payroll.annual_total / 1000) + 'k', 'Annual payroll', '#12281A') +
+            statCell(Math.round(d.funding_total / 1000000) + 'm', 'Funding raised', HEALTH.green) +
+            statCell(Math.round(d.profit_total / 1000000) + 'm', 'Profit recorded', HEALTH.green);
+          el('finance-payroll').innerHTML = d.payroll.by_department.map(function (r) {
+            return '<div class="flex items-center justify-between gap-3 border-b border-ink/8 py-2 last:border-0">' +
+              '<span class="text-[13px] text-ink/75">' + esc(r.department) + '</span>' +
+              '<span class="text-[13px] text-ink">' + Number(r.annual_total).toLocaleString() + '</span></div>';
+          }).join('');
+          el('finance-lines').innerHTML = d.funding.concat(d.profit).map(function (r) {
+            return '<div class="flex items-center justify-between gap-3 border-b border-ink/8 py-2 last:border-0">' +
+              '<span class="text-[13px] text-ink/75">' + esc(r.label) +
+                ' <span class="text-ink/40">' + esc(r.period) + '</span></span>' +
+              '<span class="text-[13px] text-ink">' + Number(r.amount).toLocaleString() + '</span></div>';
+          }).join('');
+        }).catch(function () { /* not Finance, stays hidden */ });
+      }
+
+      /* ---- Department agents ---- */
+      var activeAgent = null;
+      function agentSay(who, text, muted) {
+        var t = el('agent-thread');
+        var row = document.createElement('div');
+        row.className = 'text-[13px] leading-relaxed ' + (muted ? 'text-ink/45' : 'text-ink/80');
+        row.innerHTML = '<span class="font-medium text-forest">' + esc(who) + '</span> ' + esc(text);
+        t.appendChild(row); t.scrollTop = t.scrollHeight;
+        return row;
+      }
+
+      function loadAgents() {
+        return AION.get('/agents/directory').then(function (d) {
+          var host = el('agent-picker'); host.innerHTML = '';
+          var options = d.agents.filter(function (a) { return a.available; });
+          if (d.organization_agent.available) {
+            options.push({ key: 'org', name: d.organization_agent.name,
+                           department: 'Whole organization', remit: d.organization_agent.remit });
+          }
+          if (!options.length) {
+            host.innerHTML = '<p class="text-[13px] text-ink/40">No agent available for your role.</p>';
+            return;
+          }
+          // A head/employee lands on their own department's agent first.
+          if (!activeAgent) {
+            var own = options.filter(function (a) { return a.is_own_department; })[0];
+            activeAgent = (own || options[0]).key;
+          }
+          options.forEach(function (a) {
+            var b = document.createElement('button');
+            b.className = 'rounded-full border px-3 py-1.5 text-[12px] transition-colors duration-200 ' +
+              (a.key === activeAgent
+                ? 'border-forest/40 bg-forest/10 text-forest font-medium'
+                : 'border-ink/12 bg-white/50 text-ink/60 hover:border-forest/30');
+            b.textContent = a.name + ' · ' + a.department;
+            b.title = a.remit;
+            b.addEventListener('click', function () {
+              activeAgent = a.key;
+              el('agent-thread').innerHTML = '';
+              agentSay(a.name, 'covers ' + a.remit + '. Ask away.', true);
+              loadAgents();
+            });
+            host.appendChild(b);
+          });
+          if (!el('agent-thread').children.length) {
+            agentSay(options[0].name, 'covers ' + options[0].remit + '. Ask away.', true);
+          }
+        }).catch(function () { fail('agent-picker', 'Agents unavailable'); });
+      }
+
+      var agentBtn = el('agent-send');
+      function askAgent() {
+        var box = el('agent-input'), q = box.value.trim();
+        if (!q || !activeAgent) return;
+        box.value = '';
+        agentSay('You', q);
+        var thinking = agentSay('…', 'thinking', true);
+        postJSON('/agents/' + activeAgent + '/chat', { message: q, history: [] })
+          .then(function (r) { thinking.remove(); agentSay(r.agent, r.answer); })
+          .catch(function (e) {
+            thinking.remove();
+            agentSay('—', (e && e.message) ? e.message : 'The agent is unavailable right now.', true);
+          });
+      }
+      if (agentBtn) agentBtn.addEventListener('click', askAgent);
+      var agentInput = el('agent-input');
+      if (agentInput) agentInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') askAgent();
+      });
+
+      loadMyProfile();
+      loadDepartmentDetail();
+      loadLeave();
+      loadMyRequests();
+      loadHeadQueue();
+      loadCrossDept();
+      loadFunds();
+      loadFinance();
+      loadAgents();
+      loadOrgOverview();
+      loadMyTeam();
+      loadDepartments();
+      loadCommandCenter();
+      loadRisks();
+      loadApprovals();
+      loadMarketplace();
+      loadMarketMetrics();
+      loadPublishBox();
+      loadTimeline();
+      loadLearning();
+      loadMessages();
+      loadNotifications();
+    })();
+  </script>
+
+  <!-- ============ ROLE-AWARE TAB CONTROLLER ============ -->
+  <!-- Groups the existing sections into the structure from the handwritten notes
+       (My Work / Intelligence / My Team / Finance / Organization) and shows each
+       role only the areas it is meant to see. It never changes any section's wiring;
+       it only decides which are on screen. -->
+  <script>
+    (function () {
+      'use strict';
+      if (!window.AION) return;
+      var main = document.querySelector('main');
+      var strip = document.getElementById('tabstrip-inner');
+      if (!main || !strip) return;
+
+      // Group for each direct child of <main>, in DOM order (33 elements: hero … footer).
+      // 'dept' = department-scoped (everyone). 'intel'/'org' = organisation-wide analytics
+      // (heads and the admin only — an employee needs their department, not the whole company).
+      var GROUP = [
+        'always', // 0  hero
+        'dept',   // 1  MY DEPARTMENT — people, projects, policies
+        'intel',  // 2  intelligence index (health)
+        'intel',  // 3  history / forecast
+        'work',   // 4  Axon assistant
+        'intel',  // 5  people you depend on (bottlenecks)
+        'intel',  // 6  organizational diseases
+        'intel',  // 7  knowledge graph (brain map)
+        'intel',  // 8  MRI
+        'intel',  // 9  MRI (structural)
+        'org',    // 10 simulation
+        'org',    // 11 self-healing
+        'org',    // 12 OCSIE (if someone leaves)
+        'org',    // 13 risks / briefing
+        'org',    // 14 command centre
+        'dept',   // 15 org overview (your department vs company — your standing)
+        'work',   // 16 my profile
+        'work',   // 17 my leave
+        'work',   // 18 my requests
+        'team',   // 19 head decision queue + message department
+        'team',   // 20 fund chain
+        'finance',// 21 finance overview
+        'dept',   // 22 department agent
+        'team',   // 23 my team (who writes)
+        'org',    // 24 department scorecards (all teams — managers/admin compare; not employees)
+        'org',    // 25 risks ahead
+        'org',    // 26 approvals (document workflow)
+        'org',    // 27 marketplace (shared)
+        'org',    // 28 learning
+        'intel',  // 29 memory / timeline
+        'work',   // 30 add a document (ingestion)
+        'intel',  // 31 knowledge decay / domains
+        'work',   // 32 messages inbox
+        'always'  // 33 footer
+      ];
+
+      var claims = (AION.claims && AION.claims()) || {};
+      var perms = claims.permissions || [];
+      var canReview = perms.indexOf('review:document') !== -1;   // heads, managers, admin
+      var canCross  = perms.indexOf('read:cross_department') !== -1; // executives, admin
+
+      var TABS = [
+        { key: 'work',    label: 'My Work',       visible: true },
+        { key: 'dept',    label: 'My Department', visible: true },
+        { key: 'intel',   label: 'Intelligence',  visible: canReview || canCross }, // org-wide analytics
+        { key: 'team',    label: 'My Team',       visible: canReview },
+        { key: 'finance', label: 'Finance',       visible: false }, // revealed only if a finance view loads
+        { key: 'org',     label: 'Organization',  visible: canReview || canCross }
+      ];
+
+      // The admin is the centre of the organisation, not attached to any one department.
+      // He gets a boss-level layout: overall growth + org agent (Overview), every department
+      // with drill-down (Departments), the heads' sign-offs (Approvals), then the analytics.
+      var isAdmin = claims.role === 'org_admin' || claims.role === 'super_admin';
+      if (isAdmin) {
+        var OV = {
+          1: 'none',        // no "my department" — he owns none
+          4: 'overview',    // Axon (org-wide assistant)
+          14: 'overview',   // command centre — overall growth
+          15: 'overview',   // org overview
+          16: 'overview',   // his profile
+          17: 'none',       // no personal leave
+          18: 'none',       // no requests to send upward
+          19: 'approvals',  // heads' leave + requests
+          20: 'approvals',  // fund chain (admin stage)
+          22: 'overview',   // agents (incl. the org-wide agent)
+          23: 'departments',// who writes what
+          24: 'departments',// every department's scorecard — click to drill in
+          26: 'approvals',  // document approvals
+          30: 'overview',   // add a document
+          32: 'overview'    // messages inbox
+        };
+        Object.keys(OV).forEach(function (i) { GROUP[+i] = OV[i]; });
+        TABS = [
+          { key: 'overview',    label: 'Overview',     visible: true },
+          { key: 'departments', label: 'Departments',  visible: true },
+          { key: 'approvals',   label: 'Approvals',    visible: true },
+          { key: 'intel',       label: 'Intelligence', visible: true },
+          { key: 'finance',     label: 'Finance',      visible: true },
+          { key: 'org',         label: 'Organization', visible: true }
+        ];
+      }
+
+      var children = Array.prototype.slice.call(main.children);
+      var idGroup = {};
+      children.forEach(function (elm, i) { if (elm.id) idGroup[elm.id] = GROUP[i]; });
+
+      var active = null;
+
+      function sectionsFor(key) {
+        return children.filter(function (elm, i) { return GROUP[i] === key; });
+      }
+      function tabHasContent(key) {
+        return sectionsFor(key).some(function (elm) { return !elm.hidden; });
+      }
+
+      function showTab(key) {
+        active = key;
+        children.forEach(function (elm, i) {
+          var g = GROUP[i];
+          var on = (g === 'always' || g === key);
+          elm.style.display = on ? '' : 'none';
+          if (on) {
+            elm.classList.add('is-in');
+            elm.querySelectorAll('[data-reveal]').forEach(function (n) { n.classList.add('is-in'); });
+          }
+        });
+        Array.prototype.forEach.call(strip.children, function (b) {
+          var on = b.dataset.tab === key;
+          b.setAttribute('aria-current', on ? 'true' : 'false');
+          b.className = TAB_CLASS + (on
+            ? ' bg-forest text-white'
+            : ' text-ink/55 hover:text-ink hover:bg-forest/[0.06]');
+        });
+        // Let width-sensitive views (the knowledge-graph SVG) re-fit.
+        window.dispatchEvent(new Event('resize'));
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+
+      var TAB_CLASS = 'tab-btn shrink-0 rounded-full px-4 py-1.5 text-[13px] font-medium ' +
+                      'transition-colors duration-200 focus-visible:outline-none ' +
+                      'focus-visible:ring-2 focus-visible:ring-forest/40';
+
+      function buildStrip() {
+        strip.innerHTML = '';
+        TABS.filter(function (t) { return t.visible; }).forEach(function (t) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.dataset.tab = t.key;
+          b.setAttribute('role', 'tab');
+          b.textContent = t.label;
+          b.className = TAB_CLASS + ' text-ink/55 hover:text-ink hover:bg-forest/[0.06]';
+          b.addEventListener('click', function () { showTab(t.key); });
+          strip.appendChild(b);
+        });
+      }
+
+      function firstVisibleTab() {
+        var t = TABS.filter(function (x) { return x.visible; })[0];
+        return t ? t.key : 'work';
+      }
+
+      // Role visibility is fixed at init; the only tab that reveals itself after its
+      // data loads is Finance (only whoever owns Finance, plus the admin, has content).
+      function prune() {
+        var fin = TABS.filter(function (t) { return t.key === 'finance'; })[0];
+        if (!fin) return;
+        var should = tabHasContent('finance');
+        if (should === fin.visible) return;
+        fin.visible = should;
+        buildStrip();
+        if (!fin.visible && active === 'finance') showTab(firstVisibleTab());
+        else showTab(active);
+      }
+
+      buildStrip();
+      var initial = firstVisibleTab();
+      var hashGroup = location.hash ? idGroup[location.hash.slice(1)] : null;
+      if (hashGroup) initial = hashGroup;
+      showTab(initial);
+
+      // Make in-page anchors (search results, deep links) switch to the right tab.
+      window.addEventListener('hashchange', function () {
+        var id = location.hash.slice(1), g = idGroup[id];
+        if (g) { showTab(g); var node = document.getElementById(id); if (node) node.scrollIntoView({ block: 'start' }); }
+      });
+
+      setTimeout(prune, 1600);
+      setTimeout(prune, 3200);
+
+      window.AIONTabs = { show: showTab, showForSection: function (id) { if (idGroup[id]) showTab(idGroup[id]); } };
+    })();
+  </script>
+</body>
+</html>
