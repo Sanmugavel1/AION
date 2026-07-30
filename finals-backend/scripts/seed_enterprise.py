@@ -95,6 +95,21 @@ async def main() -> None:
         await db.flush()
         print(f"departments: {len(dept_by_code)} ({created_d} created)")
 
+        # seed_demo_data() creates its own starter departments (Engineering, Product,
+        # Sales, Operations, Security) before this script ever runs. Once the real
+        # six are in place those are just clutter — deactivate anything else so
+        # department-count and org-wide aggregates (command center, scorecards)
+        # aren't polluted with empty leftover departments.
+        stale = (await db.execute(select(Department).where(
+            Department.org_id == org.id,
+            Department.is_active.is_(True),
+            Department.code.notin_(dept_by_code.keys()),
+        ))).scalars().all()
+        for d in stale:
+            d.is_active = False
+        if stale:
+            print(f"deactivated stale starter departments: {[d.code for d in stale]}")
+
         # --- place existing people into the org chart ------------------------
         placed = 0
         for username, (code, role) in ASSIGNMENTS.items():

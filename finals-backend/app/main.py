@@ -25,6 +25,10 @@ from app.core.graph_store import graph_store
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import setup_middleware
 from scripts.seed_demo_data import seed_demo_data
+from scripts.seed_enterprise import main as seed_enterprise
+from scripts.seed_workforce import main as seed_workforce
+from scripts.reconcile_workforce import main as reconcile_workforce
+from scripts.seed_workplace_data import main as seed_workplace_data
 
 configure_logging()
 logger = get_logger(__name__)
@@ -51,6 +55,21 @@ async def lifespan(app: FastAPI):
         logger.info("Demo data verified/seeded")
     except Exception as e:
         logger.warning(f"Demo data seeding warning: {e}")
+
+    # seed_demo_data() alone only produces a ~10-person starter org (5 generic
+    # departments). The full "Nova Robotics" demo — 6 departments, 61 people,
+    # salaries, funding, leave history — needs this chain on top of it. All four
+    # steps are idempotent (match-by-name upserts), so re-running them against an
+    # already-complete org is a safe no-op — required on Render, where this whole
+    # chain reruns from scratch on every cold start.
+    try:
+        await seed_enterprise()
+        await seed_workforce(apply=True)
+        await reconcile_workforce(apply=True)
+        await seed_workplace_data(apply=True)
+        logger.info("Full workforce and workplace data verified/seeded")
+    except Exception as e:
+        logger.warning(f"Workforce/workplace seeding warning: {e}")
 
     logger.info(
         f"Graph store ready: {graph_store._graph.number_of_nodes()} nodes, "

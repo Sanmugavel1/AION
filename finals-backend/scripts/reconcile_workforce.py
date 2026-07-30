@@ -30,7 +30,7 @@ from app.core.security import UserRole
 from app.models.organization import Department
 from app.models.user import User
 
-from seed_workforce import WORKFORCE
+from scripts.seed_workforce import WORKFORCE
 
 #: The one account that sits outside the six departments.
 ADMIN_EMAIL = "demo@aion.ai"
