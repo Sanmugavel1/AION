@@ -2762,7 +2762,10 @@
                 ' <span class="text-ink/40">' + esc(r.period) + '</span></span>' +
               '<span class="text-[13px] text-ink">' + Number(r.amount).toLocaleString() + '</span></div>';
           }).join('');
-        }).catch(function () { /* not Finance, stays hidden */ });
+        }).catch(function () { /* not Finance, stays hidden */ })
+          // Reveal (or keep hidden) the Finance tab the instant this settles, rather
+          // than waiting on a fixed timer that a slow/cold-starting backend can outrun.
+          .then(function () { if (window.AIONTabs) window.AIONTabs.recheck(); });
       }
 
       /* ---- Department agents ---- */
@@ -3067,6 +3070,10 @@
         if (g) { showTab(g); var node = document.getElementById(id); if (node) node.scrollIntoView({ block: 'start' }); }
       });
 
+      // Belt-and-suspenders: loadFinance() calls window.AIONTabs.recheck() itself the
+      // moment its fetch settles, which is the real fix (no more guessing at a delay
+      // long enough to outlast Render's cold-start latency). These stay as a fallback
+      // in case that fetch resolves before this script has run and set AIONTabs up.
       setTimeout(prune, 1600);
       setTimeout(prune, 3200);
 
@@ -3074,6 +3081,7 @@
         show: showTab,
         showForSection: function (id) { if (idGroup[id]) showTab(idGroup[id]); },
         setBadge: setTabBadge,
+        recheck: prune,
       };
     })();
   </script>
