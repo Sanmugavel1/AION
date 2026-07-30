@@ -875,37 +875,131 @@ async def decide_fund(
 
 
 # ─────────────────────────── Department messages ───────────────────────────
+#
+# Full permission matrix (two-way — whoever can be messaged can also reply):
+#   Admin / executive  -> any individual department head, or broadcast to all heads
+#   Department head    -> any individual employee in their own department, their
+#                          department broadcast, any other head individually, and
+#                          the admin
+#   Employee           -> their own department head, the admin, or any individual
+#                          colleague in their own department (no broadcasting)
 
 
 class MessageCreate(BaseModel):
     #: Text is optional when a file is attached, so a person can send either or both.
     body: str = Field(default="", max_length=4000)
     subject: Optional[str] = Field(default=None, max_length=300)
-    #: Omit to send to the whole department.
+    #: Omit to broadcast — to the sender's department, or (for admin/executives, who
+    #: have no home department) to every department head.
     recipient_id: Optional[str] = None
     attachment_id: Optional[str] = None
 
 
-@router.post("/messages", status_code=201)
-async def send_message(payload: MessageCreate, current_user: AuthUser, db: DbSession):
-    """Send a message — text, a file, or both.
-
-    Heads, managers and the admin can broadcast to a department or write to anyone.
-    An employee can write back to their own department head or the admin (a reply
-    channel), but cannot broadcast — so messaging is two-way without becoming spam.
+@router.get("/contacts")
+async def message_contacts(*, current_user: AuthUser, db: DbSession):
+    """Who this person is allowed to message, and any broadcast options — drives the
+    recipient picker in the Messages hub. Mirrors the permission matrix enforced by
+    `POST /messages` exactly, so anything listed here is guaranteed to send.
     """
     org_id = uuid.UUID(current_user.org_id)
     dept_id = uuid.UUID(current_user.dept_id) if current_user.dept_id else None
-    rid = uuid.UUID(payload.recipient_id) if payload.recipient_id else None
+    uid = current_user.user_id
 
-    if not _manages(current_user):
+    people: list[dict] = []
+    broadcasts: list[dict] = []
+
+    if _manages(current_user):
+        if dept_id is not None:
+            broadcasts.append({"key": "broadcast", "label": "Everyone in your department"})
+            dept_people = (
+                await db.execute(
+                    select(User).where(User.dept_id == dept_id, User.is_active.is_(True))
+                )
+            ).scalars().all()
+            for u in dept_people:
+                if str(u.id) != uid:
+                    people.append({
+                        "id": str(u.id), "name": u.full_name, "role": u.role,
+                        "group": "Your department",
+                    })
+        else:
+            broadcasts.append({"key": "broadcast", "label": "All department heads"})
+
+        depts = {
+            str(d.id): d.name
+            for d in (await db.execute(select(Department).where(Department.org_id == org_id))).scalars().all()
+        }
+        heads = (
+            await db.execute(
+                select(User).where(User.org_id == org_id, User.role == "dept_head", User.is_active.is_(True))
+            )
+        ).scalars().all()
+        for h in heads:
+            if str(h.id) != uid:
+                people.append({
+                    "id": str(h.id), "name": h.full_name, "role": "dept_head",
+                    "group": "Department heads", "department": depts.get(str(h.dept_id)),
+                })
+
+        admin = await _org_admin(db, org_id)
+        if admin and str(admin.id) != uid:
+            people.append({"id": str(admin.id), "name": admin.full_name, "role": "org_admin", "group": "Administrator"})
+    else:
+        head = await _head_of(db, dept_id)
+        if head:
+            people.append({"id": str(head.id), "name": head.full_name, "role": "dept_head", "group": "Your department head"})
+        admin = await _org_admin(db, org_id)
+        if admin:
+            people.append({"id": str(admin.id), "name": admin.full_name, "role": "org_admin", "group": "Administrator"})
+        if dept_id is not None:
+            peers = (
+                await db.execute(
+                    select(User).where(User.dept_id == dept_id, User.is_active.is_(True))
+                )
+            ).scalars().all()
+            for u in peers:
+                if str(u.id) != uid and u.role != "dept_head":
+                    people.append({"id": str(u.id), "name": u.full_name, "role": u.role, "group": "Your colleagues"})
+
+    return {"people": people, "broadcasts": broadcasts}
+
+
+@router.post("/messages", status_code=201)
+async def send_message(payload: MessageCreate, current_user: AuthUser, db: DbSession):
+    """Send a message — text, a file, or both. See the permission matrix above."""
+    org_id = uuid.UUID(current_user.org_id)
+    dept_id = uuid.UUID(current_user.dept_id) if current_user.dept_id else None
+    rid = uuid.UUID(payload.recipient_id) if payload.recipient_id else None
+    uid = uuid.UUID(current_user.user_id)
+
+    recipient: Optional[User] = None
+    if rid is not None:
+        recipient = (
+            await db.execute(
+                select(User).where(User.id == rid, User.org_id == org_id, User.is_active.is_(True))
+            )
+        ).scalar_one_or_none()
+        if recipient is None:
+            raise HTTPException(status_code=404, detail="No such person to message.")
+
+    manages = _manages(current_user)
+    if not manages:
         if rid is None:
-            raise HTTPException(status_code=403, detail="Only heads broadcast to a department; you can message your head directly.")
+            raise HTTPException(
+                status_code=403,
+                detail="Only heads broadcast to a department; you can message your head, "
+                       "the admin, or a colleague directly.",
+            )
         head = await _head_of(db, dept_id)
         admin = await _org_admin(db, org_id)
         allowed = {str(u.id) for u in (head, admin) if u}
+        if dept_id is not None and recipient.dept_id is not None and str(recipient.dept_id) == str(dept_id):
+            allowed.add(str(rid))
         if str(rid) not in allowed:
-            raise HTTPException(status_code=403, detail="You can message your own department head or the admin.")
+            raise HTTPException(
+                status_code=403,
+                detail="You can message your own department head, the admin, or a colleague in your department.",
+            )
 
     att = await _resolve_attachment(db, org_id, payload.attachment_id)
     body = (payload.body or "").strip()
@@ -914,33 +1008,57 @@ async def send_message(payload: MessageCreate, current_user: AuthUser, db: DbSes
     if not body and att:
         body = "(file attached)"
 
-    db.add(
-        DepartmentMessage(
-            org_id=org_id, dept_id=dept_id,
-            sender_id=uuid.UUID(current_user.user_id),
-            recipient_id=rid, subject=payload.subject, body=body,
-            kind="direct" if rid else "announcement",
-            attachment_id=att,
+    sender_name = await _display_name(db, current_user.user_id)
+    title = payload.subject or f"Message from {sender_name}"
+    notify_body = body + (" [file attached]" if att else "")
+
+    if rid:
+        db.add(
+            DepartmentMessage(
+                org_id=org_id, dept_id=dept_id, sender_id=uid,
+                recipient_id=rid, subject=payload.subject, body=body,
+                kind="direct", attachment_id=att,
+            )
         )
-    )
-    targets = (
-        [rid]
-        if rid
-        else [
+        targets = [rid]
+    elif dept_id is not None:
+        # Broadcast to the sender's own department: one row, matched by dept_id for
+        # every member (efficient — see GET /messages).
+        db.add(
+            DepartmentMessage(
+                org_id=org_id, dept_id=dept_id, sender_id=uid,
+                recipient_id=None, subject=payload.subject, body=body,
+                kind="announcement", attachment_id=att,
+            )
+        )
+        targets = [
             u.id
             for u in (
-                await db.execute(
-                    select(User).where(User.dept_id == dept_id, User.is_active.is_(True))
-                )
+                await db.execute(select(User).where(User.dept_id == dept_id, User.is_active.is_(True)))
             ).scalars().all()
-            if str(u.id) != current_user.user_id
+            if u.id != uid
         ]
-    )
+    else:
+        # Admin/executive broadcasting with no home department: reaches every
+        # department head. No single dept_id to match on, so each head gets their
+        # own row (still shows as a normal message in their inbox).
+        heads = (
+            await db.execute(
+                select(User).where(User.org_id == org_id, User.role == "dept_head", User.is_active.is_(True))
+            )
+        ).scalars().all()
+        targets = [h.id for h in heads]
+        for h in heads:
+            db.add(
+                DepartmentMessage(
+                    org_id=org_id, dept_id=None, sender_id=uid,
+                    recipient_id=h.id, subject=payload.subject, body=body,
+                    kind="direct", attachment_id=att,
+                )
+            )
+
     for t in targets:
-        await _notify(
-            db, org_id, t, payload.subject or "Message from your head",
-            body + (" [file attached]" if att else ""), "message"
-        )
+        await _notify(db, org_id, t, title, notify_body, "message")
     await db.commit()
     return {"sent_to": len(targets), "kind": "direct" if rid else "announcement"}
 

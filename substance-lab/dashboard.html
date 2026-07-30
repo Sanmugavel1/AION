@@ -185,6 +185,10 @@
     </div>
   </header>
 
+  <!-- New-message toasts. -->
+  <div id="toast-host" aria-live="polite"
+       class="pointer-events-none fixed bottom-5 right-5 z-[60] flex flex-col gap-2"></div>
+
   <!-- ============ ROLE-AWARE TAB STRIP ============ -->
   <div id="tabstrip" class="sticky top-[57px] z-40 border-b border-black/5 bg-bg/85 backdrop-blur-md">
     <div class="mx-auto max-w-7xl px-6">
@@ -595,26 +599,15 @@
         </div>
       </div>
 
-      <div class="mt-8 border-t border-ink/8 pt-6">
-        <p class="label text-forest/70 mb-3">Message your department</p>
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="min-w-[220px] flex-1">
-            <label for="msg-body" class="block text-[12px] text-ink/55 mb-1">Message</label>
-            <input id="msg-body" type="text" placeholder="Goes to everyone in your department"
-              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
-                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
-          </div>
-          <input id="msg-file" type="file" class="hidden" />
-          <button id="msg-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
-          <button id="msg-send" class="btn btn-ghost btn-sm shrink-0">Send to all</button>
-        </div>
-        <p id="msg-filename" class="mt-1 text-[12px] text-forest/70"></p>
-        <p id="msg-status" class="mt-1 text-[12px] text-ink/50"></p>
-      </div>
-
-      <!-- Cross-department: when one department needs another, message it or ask for approval. -->
+      <!-- Cross-department: when one department needs another's sign-off. Messaging
+           another head directly now lives in the Messages tab — this box is only
+           for the formal approval-queue request. -->
       <div id="cross-dept" class="mt-8 border-t border-ink/8 pt-6" hidden>
-        <p class="label text-forest/70 mb-3">Reach another department</p>
+        <p class="label text-forest/70 mb-3">Request approval from another department</p>
+        <p class="mb-3 text-[13px] text-ink/55">
+          To just send a message to another head, use <a href="#messages-inbox" class="text-forest underline decoration-forest/30 underline-offset-2">Messages</a>.
+          Use this when you need a formal yes/no from another department.
+        </p>
         <div class="flex flex-wrap items-end gap-3">
           <div class="min-w-[170px]">
             <label for="cd-head" class="block text-[12px] text-ink/55 mb-1">Department head</label>
@@ -630,11 +623,10 @@
           </div>
           <input id="cd-file" type="file" class="hidden" />
           <button id="cd-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
-          <button id="cd-send" class="btn btn-primary btn-sm shrink-0">Send message</button>
-          <button id="cd-request" class="btn btn-ghost btn-sm shrink-0">Request approval</button>
+          <button id="cd-request" class="btn btn-primary btn-sm shrink-0">Request approval</button>
         </div>
         <p id="cd-filename" class="mt-1 text-[12px] text-forest/70"></p>
-        <p id="cd-status" class="mt-2 text-[12px] text-ink/50"><b>Send message</b> reaches that head's inbox as a note. <b>Request approval</b> instead goes to their approvals queue for a yes/no. You can attach a file to either.</p>
+        <p id="cd-status" class="mt-2 text-[12px] text-ink/50">Goes to that head's approvals queue for a yes/no. You can attach a file.</p>
       </div>
     </section>
 
@@ -889,27 +881,41 @@
     <section id="messages-inbox" data-reveal class="card mt-6 p-8">
       <div class="mb-6">
         <p class="label text-forest/70 mb-2">Messages</p>
-        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">What people sent you.</h2>
+        <h2 class="font-geist text-2xl font-light tracking-tight text-ink">Talk to anyone you work with.</h2>
         <p class="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink/55">
-          Messages and files sent to you or your department. Files open with a click.
+          One place for every conversation: your head, the admin, a colleague, or everyone
+          at once. Text, a file, or both — and whoever you write to can always write back.
         </p>
       </div>
-      <!-- Employees can write back to their head — messaging is two-way. -->
-      <div id="msg-reply" hidden class="mb-6 rounded-xl border border-ink/10 bg-white/45 p-4">
-        <p id="reply-label" class="label text-forest/70 mb-2">Message your head</p>
+
+      <!-- One composer for everyone; who shows up in "To" depends on what you're
+           allowed to reach (see GET /workplace/contacts). -->
+      <div class="mb-6 rounded-xl border border-ink/10 bg-white/45 p-4">
+        <p class="label text-forest/70 mb-3">New message</p>
         <div class="flex flex-wrap items-end gap-3">
+          <div class="min-w-[210px]">
+            <label for="msg-to" class="block text-[12px] text-ink/55 mb-1">To</label>
+            <select id="msg-to"
+              class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
+                     transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25">
+              <option value="">Loading…</option>
+            </select>
+          </div>
           <div class="min-w-[220px] flex-1">
-            <input id="reply-body" type="text" placeholder="Write to your department head"
+            <label for="msg-body" class="block text-[12px] text-ink/55 mb-1">Message</label>
+            <input id="msg-body" type="text" placeholder="Write something…"
               class="w-full rounded-lg border border-ink/12 bg-white/70 px-3 py-2 text-[13px] text-ink
                      transition-colors duration-200 focus:border-forest/40 focus:outline-none focus:ring-2 focus:ring-forest/25" />
           </div>
-          <input id="reply-file" type="file" class="hidden" />
-          <button id="reply-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
-          <button id="reply-send" class="btn btn-primary btn-sm shrink-0">Send</button>
+          <input id="msg-file" type="file" class="hidden" />
+          <button id="msg-attach" type="button" class="btn btn-ghost btn-sm shrink-0">Attach file</button>
+          <button id="msg-send" class="btn btn-primary btn-sm shrink-0">Send</button>
         </div>
-        <p id="reply-filename" class="mt-1 text-[12px] text-forest/70"></p>
-        <p id="reply-status" class="mt-1 text-[12px] text-ink/50"></p>
+        <p id="msg-filename" class="mt-1 text-[12px] text-forest/70"></p>
+        <p id="msg-status" class="mt-1 text-[12px] text-ink/50"></p>
       </div>
+
+      <p class="label text-forest/70 mb-3">Inbox</p>
       <div id="messages-list" class="space-y-3"><div class="skeleton h-12"></div><div class="skeleton h-12"></div></div>
     </section>
 
@@ -1954,13 +1960,74 @@
       }
 
       /* ---- Notifications (Section 35) ---- */
+      function timeAgo(iso) {
+        if (!iso) return '';
+        var d = new Date(iso), secs = Math.max(0, (Date.now() - d.getTime()) / 1000);
+        if (secs < 60) return 'just now';
+        if (secs < 3600) return Math.floor(secs / 60) + 'm ago';
+        if (secs < 86400) return Math.floor(secs / 3600) + 'h ago';
+        if (secs < 86400 * 7) return Math.floor(secs / 86400) + 'd ago';
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+      // One small glyph per notification category, so the bell's contents read
+      // at a glance instead of everything looking like the same grey line.
+      var NOTIF_ICON = {
+        message: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4"><path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h11A1.5 1.5 0 0 1 17 5.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3H4.5A1.5 1.5 0 0 1 3 12.5v-7Z" stroke-linejoin="round"/></svg>',
+        approval: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4"><path d="M10 3v14M3 10h14" stroke-linecap="round"/></svg>',
+        decision: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4"><path d="m4 10 4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      };
+      var NOTIF_DEFAULT_ICON = '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4"><circle cx="10" cy="10" r="6.5"/><path d="M10 8v4.5M10 6.2v.1" stroke-linecap="round"/></svg>';
+
+      // A brief, dismissable toast in the corner — the "someone just messaged you"
+      // moment, without an intrusive browser alert.
+      function toast(title, body, onClick) {
+        var host = el('toast-host'); if (!host) return;
+        var card = document.createElement('div');
+        card.className = 'pointer-events-auto w-80 max-w-[85vw] cursor-pointer rounded-xl border border-ink/10 ' +
+          'bg-white shadow-[0_18px_40px_-16px_rgba(20,42,30,0.45)] px-4 py-3 transition-opacity duration-500';
+        card.innerHTML = '<div class="flex items-start gap-2.5">' +
+          '<span class="mt-0.5 text-forest">' + NOTIF_ICON.message + '</span>' +
+          '<div class="min-w-0"><p class="text-[13px] font-medium text-ink">' + esc(title) + '</p>' +
+          (body ? '<p class="mt-0.5 truncate text-[12px] text-ink/60">' + esc(body) + '</p>' : '') + '</div></div>';
+        card.addEventListener('click', function () { card.remove(); if (onClick) onClick(); });
+        host.appendChild(card);
+        setTimeout(function () { card.style.opacity = '0'; setTimeout(function () { card.remove(); }, 500); }, 6000);
+      }
+
+      var seenNotifIds = null; // null = first load; don't toast on the initial fetch
       function loadNotifications() {
         return AION.get('/enterprise/notifications?limit=12').then(function (d) {
-          var dot = el('notif-dot'); if (!dot) return;
-          if (d.unread_count > 0) { dot.hidden = false; dot.textContent = d.unread_count > 9 ? '9+' : d.unread_count; }
-          else { dot.hidden = true; }
-          window.__notifs = d.notifications || [];
+          var dot = el('notif-dot');
+          if (dot) {
+            if (d.unread_count > 0) { dot.hidden = false; dot.textContent = d.unread_count > 9 ? '9+' : d.unread_count; }
+            else { dot.hidden = true; }
+          }
+          var list = d.notifications || [];
+          window.__notifs = list;
+
+          var unreadMessages = list.filter(function (n) { return n.category === 'message' && !n.is_read; });
+          if (window.AIONTabs) window.AIONTabs.setBadge('messages', unreadMessages.length);
+
+          if (seenNotifIds) {
+            unreadMessages
+              .filter(function (n) { return !seenNotifIds.has(n.id); })
+              .forEach(function (n) {
+                toast(n.title || 'New message', n.body, function () {
+                  if (window.AIONTabs) window.AIONTabs.showForSection('messages-inbox');
+                  markNotifRead(n.id);
+                });
+              });
+          }
+          seenNotifIds = new Set(list.map(function (n) { return n.id; }));
+
+          var panel = el('notif-panel');
+          if (panel && !panel.hidden) renderNotifPanel();
         }).catch(function () {});
+      }
+
+      function markNotifRead(id) {
+        AION.authFetch('/enterprise/notifications/' + id + '/read', { method: 'POST' })
+          .then(function () { return loadNotifications(); });
       }
 
       function renderNotifPanel() {
@@ -1972,16 +2039,35 @@
         }
         host.innerHTML = list.slice(0, 12).map(function (n) {
           var tone = n.severity === 'critical' ? '#C0492B'
-                   : n.severity === 'warning' ? HEALTH.yellow : HEALTH.green;
-          return '<div class="flex gap-3 rounded-lg px-3 py-2.5 ' +
+                   : n.severity === 'warning' ? HEALTH.yellow : '#1E4D33';
+          return '<button type="button" data-notif="' + esc(n.id) + '" data-cat="' + esc(n.category || '') + '" ' +
+            'class="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-forest/[0.07] ' +
             (n.is_read ? '' : 'bg-forest/[0.05]') + '">' +
-            '<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" style="background:' + tone + '"></span>' +
-            '<div class="min-w-0">' +
-              '<p class="text-[13px] font-medium text-ink">' + esc(n.title || 'Update') + '</p>' +
+            '<span class="mt-0.5 shrink-0" style="color:' + tone + '">' + (NOTIF_ICON[n.category] || NOTIF_DEFAULT_ICON) + '</span>' +
+            '<div class="min-w-0 flex-1">' +
+              '<div class="flex items-baseline justify-between gap-2">' +
+                '<p class="text-[13px] font-medium text-ink">' + esc(n.title || 'Update') + '</p>' +
+                '<span class="shrink-0 text-[11px] text-ink/35">' + esc(timeAgo(n.created_at)) + '</span>' +
+              '</div>' +
               (n.body ? '<p class="text-[12px] text-ink/55">' + esc(n.body) + '</p>' : '') +
-            '</div></div>';
+            '</div>' +
+            (n.is_read ? '' : '<span class="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-forest"></span>') +
+          '</button>';
         }).join('');
       }
+
+      // Clicking a notification marks it read and, for messages, jumps straight
+      // to the conversation — the whole point of a notification is to get you there.
+      if (el('notif-list')) el('notif-list').addEventListener('click', function (ev) {
+        var b = ev.target.closest ? ev.target.closest('[data-notif]') : null;
+        if (!b) return;
+        var id = b.getAttribute('data-notif'), cat = b.getAttribute('data-cat');
+        markNotifRead(id);
+        if (cat === 'message' && window.AIONTabs) {
+          window.AIONTabs.showForSection('messages-inbox');
+          closeNotif();
+        }
+      });
 
       var notifBtn = el('notif-btn'), notifPanel = el('notif-panel');
       function closeNotif() {
@@ -2316,6 +2402,55 @@
         }).catch(function () { fail('messages-list', 'Could not load messages'); });
       }
 
+      /* Who this person may message — a broadcast option (if any) first, then
+         individuals grouped by relationship (their department head, the admin,
+         colleagues, other heads…). Mirrors the server-side permission matrix in
+         POST /workplace/messages exactly, so anything listed here will send. */
+      function loadContacts() {
+        return AION.get('/workplace/contacts').then(function (d) {
+          var sel = el('msg-to'); if (!sel) return;
+          var html = '';
+          (d.broadcasts || []).forEach(function (b) {
+            html += '<option value="">' + esc(b.label) + '</option>';
+          });
+          var groups = {}, order = [];
+          (d.people || []).forEach(function (p) {
+            if (!groups[p.group]) { groups[p.group] = []; order.push(p.group); }
+            groups[p.group].push(p);
+          });
+          order.forEach(function (g) {
+            html += '<optgroup label="' + esc(g) + '">' + groups[g].map(function (p) {
+              var extra = p.department ? ' — ' + p.department : '';
+              return '<option value="' + esc(p.id) + '">' + esc(p.name) + esc(extra) + '</option>';
+            }).join('') + '</optgroup>';
+          });
+          sel.innerHTML = html || '<option value="">No one to message yet</option>';
+        }).catch(function () {
+          var sel = el('msg-to'); if (sel) sel.innerHTML = '<option value="">Could not load contacts</option>';
+        });
+      }
+
+      var msgPick = wireFilePicker('msg-attach', 'msg-file', 'msg-filename');
+      var msgBtn = el('msg-send');
+      if (msgBtn) msgBtn.addEventListener('click', function () {
+        var sel = el('msg-to'), to = sel ? sel.value : '';
+        var body = el('msg-body').value.trim(), note = el('msg-status');
+        var f = msgPick.get();
+        if (!body && !f) { note.textContent = 'Write something or attach a file.'; return; }
+        msgBtn.disabled = true; msgBtn.textContent = 'Sending…';
+        (f ? uploadAttachment(f) : Promise.resolve(null))
+          .then(function (aid) { return postJSON('/workplace/messages', { body: body, recipient_id: to || null, attachment_id: aid }); })
+          .then(function (r) {
+            var n = (r && r.sent_to) || 0;
+            note.textContent = n === 1 ? 'Sent.' : 'Sent to ' + n + ' people.';
+            if (f) note.textContent += ' File attached.';
+            el('msg-body').value = ''; msgPick.clear();
+            loadMessages();
+          })
+          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
+          .then(function () { msgBtn.disabled = false; msgBtn.textContent = 'Send'; });
+      });
+
       /* ---- Your own record ---- */
       /* ---- My Department: who is here, who does what, its policies (notes ii–iii) ---- */
       function loadDepartmentDetail() {
@@ -2370,32 +2505,11 @@
           }
           list('profile-current', p.currently_working_on, 'Nothing assigned right now.');
           list('profile-done', p.recently_completed, 'Nothing recorded yet.');
-          // Give employees a way to write back to their head (two-way messaging).
-          if (!CAN_REVIEW && p.head_of_department_id) {
-            window.__headId = p.head_of_department_id;
-            var rb = el('msg-reply'); if (rb) rb.hidden = false;
-            var rl = el('reply-label'); if (rl && p.head_of_department) rl.textContent = 'Message ' + p.head_of_department;
-          }
         }).catch(function (e) {
           console.warn('AION: profile unavailable —', e && e.message);
           fail('profile-grid', 'Could not load your record');
         });
       }
-
-      var replyPick = wireFilePicker('reply-attach', 'reply-file', 'reply-filename');
-      var replyBtn = el('reply-send');
-      if (replyBtn) replyBtn.addEventListener('click', function () {
-        var to = window.__headId, body = el('reply-body').value.trim(), note = el('reply-status');
-        var f = replyPick.get();
-        if (!to) { note.textContent = 'No head on record to message.'; return; }
-        if (!body && !f) { note.textContent = 'Write something or attach a file.'; return; }
-        replyBtn.disabled = true; replyBtn.textContent = 'Sending…';
-        (f ? uploadAttachment(f) : Promise.resolve(null))
-          .then(function (aid) { return postJSON('/workplace/messages', { body: body, recipient_id: to, attachment_id: aid }); })
-          .then(function () { note.textContent = 'Sent to your head.' + (f ? ' File attached.' : ''); el('reply-body').value = ''; replyPick.clear(); })
-          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
-          .then(function () { replyBtn.disabled = false; replyBtn.textContent = 'Send'; });
-      });
 
       /* ---- Leave ---- */
       function loadLeave() {
@@ -2538,27 +2652,13 @@
         return Promise.all([a, b]);
       }
 
-      var msgPick = wireFilePicker('msg-attach', 'msg-file', 'msg-filename');
-      var msgBtn = el('msg-send');
-      if (msgBtn) msgBtn.addEventListener('click', function () {
-        var body = el('msg-body').value.trim(), note = el('msg-status');
-        var f = msgPick.get();
-        if (!body && !f) { note.textContent = 'Write something or attach a file.'; return; }
-        msgBtn.disabled = true; msgBtn.textContent = 'Sending…';
-        (f ? uploadAttachment(f) : Promise.resolve(null))
-          .then(function (aid) { return postJSON('/workplace/messages', { body: body, attachment_id: aid }); })
-          .then(function (r) { note.textContent = 'Sent to ' + r.sent_to + ' people.' + (f ? ' File attached.' : ''); el('msg-body').value = ''; msgPick.clear(); })
-          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
-          .then(function () { msgBtn.disabled = false; msgBtn.textContent = 'Send to all'; });
-      });
-
-      /* ---- Cross-department: message another department's head ---- */
+      /* ---- Cross-department: request approval from another department's head ---- */
       function loadCrossDept() {
         if (!CAN_REVIEW) return Promise.resolve();
         return AION.get('/workplace/heads').then(function (d) {
           var sel = el('cd-head'); if (!sel) return;
           var heads = d.heads || [];
-          if (!heads.length) return; // sole department — nobody to message
+          if (!heads.length) return; // sole department — nobody to ask
           sel.innerHTML = heads.map(function (h) {
             return '<option value="' + h.id + '">' + esc(h.department) + ' — ' + esc(h.name) + '</option>';
           }).join('');
@@ -2566,23 +2666,6 @@
         }).catch(function () { /* not permitted; stays hidden */ });
       }
       var cdPick = wireFilePicker('cd-attach', 'cd-file', 'cd-filename');
-      var cdBtn = el('cd-send');
-      if (cdBtn) cdBtn.addEventListener('click', function () {
-        var to = el('cd-head').value, body = el('cd-body').value.trim(), note = el('cd-status');
-        var f = cdPick.get();
-        if (!to) { note.textContent = 'Pick a department first.'; return; }
-        if (!body && !f) { note.textContent = 'Write a message or attach a file.'; return; }
-        cdBtn.disabled = true; cdBtn.textContent = 'Sending…';
-        (f ? uploadAttachment(f) : Promise.resolve(null))
-          .then(function (aid) { return postJSON('/workplace/messages', { body: body, recipient_id: to, attachment_id: aid }); })
-          .then(function () {
-            var label = el('cd-head').options[el('cd-head').selectedIndex].text;
-            note.textContent = 'Message sent to ' + label + '.' + (f ? ' File attached.' : ''); el('cd-body').value = ''; cdPick.clear();
-          })
-          .catch(function (e) { note.textContent = e && e.message ? e.message : 'Could not send.'; })
-          .then(function () { cdBtn.disabled = false; cdBtn.textContent = 'Send message'; });
-      });
-
       var cdReq = el('cd-request');
       if (cdReq) cdReq.addEventListener('click', function () {
         var to = el('cd-head').value, body = el('cd-body').value.trim(), note = el('cd-status');
@@ -2773,7 +2856,11 @@
       loadTimeline();
       loadLearning();
       loadMessages();
+      loadContacts();
       loadNotifications();
+
+      // Keep the bell (and the Messages tab) live without a page reload.
+      setInterval(loadNotifications, 30000);
     })();
   </script>
 
@@ -2813,7 +2900,7 @@
         'work',   // 16 my profile
         'work',   // 17 my leave
         'work',   // 18 my requests
-        'team',   // 19 head decision queue + message department
+        'team',   // 19 head decision queue + cross-department approval requests
         'team',   // 20 fund chain
         'finance',// 21 finance overview
         'dept',   // 22 department agent
@@ -2826,7 +2913,7 @@
         'intel',  // 29 memory / timeline
         'work',   // 30 add a document (ingestion)
         'intel',  // 31 knowledge decay / domains
-        'work',   // 32 messages inbox
+        'messages', // 32 messages hub — its own tab, not buried in My Work
         'always'  // 33 footer
       ];
 
@@ -2836,9 +2923,10 @@
       var canCross  = perms.indexOf('read:cross_department') !== -1; // executives, admin
 
       var TABS = [
-        { key: 'work',    label: 'My Work',       visible: true },
-        { key: 'dept',    label: 'My Department', visible: true },
-        { key: 'intel',   label: 'Intelligence',  visible: canReview || canCross }, // org-wide analytics
+        { key: 'work',     label: 'My Work',       visible: true },
+        { key: 'dept',     label: 'My Department', visible: true },
+        { key: 'messages', label: 'Messages',      visible: true },
+        { key: 'intel',    label: 'Intelligence',  visible: canReview || canCross }, // org-wide analytics
         { key: 'team',    label: 'My Team',       visible: canReview },
         { key: 'finance', label: 'Finance',       visible: false }, // revealed only if a finance view loads
         { key: 'org',     label: 'Organization',  visible: canReview || canCross }
@@ -2863,14 +2951,15 @@
           23: 'departments',// who writes what
           24: 'departments',// every department's scorecard — click to drill in
           26: 'approvals',  // document approvals
-          30: 'overview',   // add a document
-          32: 'overview'    // messages inbox
+          30: 'overview'    // add a document
+          // 32 (messages) is left at its base 'messages' group — its own tab below.
         };
         Object.keys(OV).forEach(function (i) { GROUP[+i] = OV[i]; });
         TABS = [
           { key: 'overview',    label: 'Overview',     visible: true },
           { key: 'departments', label: 'Departments',  visible: true },
           { key: 'approvals',   label: 'Approvals',    visible: true },
+          { key: 'messages',    label: 'Messages',     visible: true },
           { key: 'intel',       label: 'Intelligence', visible: true },
           { key: 'finance',     label: 'Finance',      visible: true },
           { key: 'org',         label: 'Organization', visible: true }
@@ -2924,11 +3013,28 @@
           b.type = 'button';
           b.dataset.tab = t.key;
           b.setAttribute('role', 'tab');
-          b.textContent = t.label;
           b.className = TAB_CLASS + ' text-ink/55 hover:text-ink hover:bg-forest/[0.06]';
           b.addEventListener('click', function () { showTab(t.key); });
+          var label = document.createElement('span');
+          label.textContent = t.label;
+          b.appendChild(label);
+          var badge = document.createElement('span');
+          badge.dataset.tabBadge = t.key;
+          badge.hidden = true;
+          badge.className = 'ml-1.5 inline-flex min-w-[16px] items-center justify-center rounded-full ' +
+            'bg-[#C0492B] px-1 text-[10px] font-medium leading-4 text-white';
+          b.appendChild(badge);
           strip.appendChild(b);
         });
+      }
+
+      // Lets other scripts (notifications) put a small unread count on a tab —
+      // e.g. the Messages tab lights up the moment something new arrives.
+      function setTabBadge(key, count) {
+        var el2 = strip.querySelector('[data-tab-badge="' + key + '"]');
+        if (!el2) return;
+        if (count > 0) { el2.hidden = false; el2.textContent = count > 9 ? '9+' : String(count); }
+        else { el2.hidden = true; }
       }
 
       function firstVisibleTab() {
@@ -2964,7 +3070,11 @@
       setTimeout(prune, 1600);
       setTimeout(prune, 3200);
 
-      window.AIONTabs = { show: showTab, showForSection: function (id) { if (idGroup[id]) showTab(idGroup[id]); } };
+      window.AIONTabs = {
+        show: showTab,
+        showForSection: function (id) { if (idGroup[id]) showTab(idGroup[id]); },
+        setBadge: setTabBadge,
+      };
     })();
   </script>
 </body>

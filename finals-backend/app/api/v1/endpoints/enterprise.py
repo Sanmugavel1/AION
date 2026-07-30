@@ -312,6 +312,20 @@ async def mark_all_read(*, current_user: AuthUser, db: DbSession):
     return {"marked_read": len(rows)}
 
 
+@router.post("/notifications/{notification_id}/read")
+async def mark_one_read(notification_id: str, *, current_user: AuthUser, db: DbSession):
+    row = (await db.execute(
+        select(Notification).where(
+            Notification.id == UUID(notification_id),
+            Notification.user_id == UUID(current_user.user_id))
+    )).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="No such notification")
+    row.is_read = True
+    await db.commit()
+    return {"id": str(row.id), "is_read": True}
+
+
 # ----------------------------------------------------------------------------
 # Section 36 — Universal Enterprise Search
 # ----------------------------------------------------------------------------

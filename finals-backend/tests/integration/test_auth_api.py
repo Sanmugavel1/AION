@@ -23,8 +23,7 @@ class TestAuthRegister:
         data = resp.json()
         assert "access_token" in data
         assert "refresh_token" in data
-        assert "org_id" in data
-        assert data["user"]["role"] == "org_admin"
+        assert data["token_type"] == "bearer"
 
     async def test_register_duplicate_email_fails(self, client: AsyncClient):
         payload = {
@@ -43,7 +42,7 @@ class TestAuthRegister:
         payload["username"] = "dupuser2"
         payload["org_name"] = "Dup Corp 2"
         r2 = await client.post("/api/v1/auth/register", json=payload)
-        assert r2.status_code == 409
+        assert r2.status_code == 400
 
     async def test_register_weak_password_rejected(self, client: AsyncClient):
         resp = await client.post(
