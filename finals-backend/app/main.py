@@ -29,6 +29,7 @@ from scripts.seed_enterprise import main as seed_enterprise
 from scripts.seed_workforce import main as seed_workforce
 from scripts.reconcile_workforce import main as reconcile_workforce
 from scripts.seed_workplace_data import main as seed_workplace_data
+from scripts.sync_graph_people import main as sync_graph_people
 
 configure_logging()
 logger = get_logger(__name__)
@@ -70,6 +71,17 @@ async def lifespan(app: FastAPI):
         logger.info("Full workforce and workplace data verified/seeded")
     except Exception as e:
         logger.warning(f"Workforce/workplace seeding warning: {e}")
+
+    # seed_workforce/seed_workplace_data only write SQL rows — the ~48 people they
+    # add past the original starter org never got a graph Person node or any owned
+    # knowledge, which made them invisible to the simulator/bottleneck/brain-map
+    # features and made "what if this person leaves" return all zeros for most
+    # of the org. Sync closes that gap; idempotent like the steps above.
+    try:
+        await sync_graph_people(apply=True)
+        logger.info("Graph people/knowledge coverage synced")
+    except Exception as e:
+        logger.warning(f"Graph sync warning: {e}")
 
     logger.info(
         f"Graph store ready: {graph_store._graph.number_of_nodes()} nodes, "

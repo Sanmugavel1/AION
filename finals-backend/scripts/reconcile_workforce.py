@@ -61,6 +61,22 @@ async def main(apply: bool) -> None:
         ).scalar_one()
         org_id = admin.org_id
 
+        # seed_demo_data() puts the admin in its own starter-org "Engineering"
+        # department; seed_enterprise() later deactivates that department without
+        # ever moving the admin out of it, so the org_admin ends up permanently
+        # pointing at a dead department (invisible to the "outside departments"
+        # check below, since dept_id is a real, non-null id — just one that no
+        # longer resolves to an active department). Clear it: org admins are
+        # org-wide, the same as the two executive accounts, which never get a
+        # dept_id in the first place.
+        admin_dept = (
+            await db.execute(select(Department).where(Department.id == admin.dept_id))
+        ).scalar_one_or_none() if admin.dept_id else None
+        if admin_dept is not None and not admin_dept.is_active:
+            print(f"  admin department correction: '{admin_dept.name}' (inactive) -> none")
+            if apply:
+                admin.dept_id = None
+
         depts = {
             d.code: d
             for d in (

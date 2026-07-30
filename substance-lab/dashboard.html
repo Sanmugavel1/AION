@@ -1226,7 +1226,7 @@
       });
 
       /* ---- People list (shared by Simulation + OCSIE) ---- */
-      var peopleReady = AION.get('/graph/nodes').then(function (d) {
+      var peopleReady = AION.get('/graph/nodes?node_type=Person&limit=200').then(function (d) {
         return (d.nodes || []).filter(function (n) { return n.type === 'Person'; });
       }).catch(function(){ return []; });
 

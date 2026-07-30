@@ -68,6 +68,9 @@ class GraphRepository:
             created_at=now_iso(), updated_at=now_iso(),
         )
 
+    async def delete_person_node(self, user_id: str) -> bool:
+        return graph_store.remove_node(user_id)
+
     async def create_knowledge_node(
         self,
         knowledge_id: str,

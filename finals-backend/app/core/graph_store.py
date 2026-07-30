@@ -113,6 +113,18 @@ class GraphStore:
             self._graph.nodes[node_id].update(props)
             self._save()
 
+    def remove_node(self, node_id: str) -> bool:
+        """Drop a node and every edge touching it (NetworkX does this automatically
+        on remove_node). Used to clean up graph nodes for people who no longer exist
+        in the org (e.g. deactivated by a reconciliation pass) so they don't linger
+        as selectable "ghosts" in graph-backed features."""
+        with self._lock:
+            if not self._graph.has_node(node_id):
+                return False
+            self._graph.remove_node(node_id)
+            self._save()
+            return True
+
     # ─── Edge Operations ───────────────────────────────────────────────────────
 
     def upsert_edge(self, source: str, target: str, rel_type: str, **props: Any) -> Optional[Dict[str, Any]]:
